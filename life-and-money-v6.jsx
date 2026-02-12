@@ -1,18 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Life & Money - Financial Literacy Game</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Libre Franklin',sans-serif}</style>
-</head>
-<body>
-<div id="root"></div>
-<script type="text/babel">
-const {useState,useEffect,useCallback}=React;
+import { useState, useEffect, useCallback } from "react";
 const C={bg:"#f4f2ed",card:"#fff",dk:"#1a1a2e",dk2:"#16213e",g:"#0f9b58",gd:"#0a7a44",gl:"#e8f5e9",r:"#c62828",rl:"#ffebee",w:"#e65100",wl:"#fff3e0",b:"#0277bd",bl:"#e1f5fe",m:"#78909c",br:"#e0ddd5",t:"#263238",tl:"#607d8b"};
 const F={d:"'Fraunces',serif",b:"'Libre Franklin',sans-serif"};
 const bp={padding:"12px 26px",borderRadius:10,border:"none",background:`linear-gradient(135deg,${C.g},${C.gd})`,color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:F.b,boxShadow:"0 2px 10px rgba(15,155,88,.25)"};
@@ -499,7 +485,7 @@ return<div style={{minHeight:"100vh",display:"flex",flexDirection:"column",align
 const PHASES=["welcome","interests","education","pause1","career","paystub","budget","pause2","lifeChoices","insurance","housing","pause3","investing","pause4","lifeEvents","retirement","summary","teacher"];
 const initPd={name:"",interests:[],motivations:[],edPath:null,debt:0,loanMo:0,salMul:1,career:null,salary:0,baseSal:0,budget:{},retPct:.06,monthlySave:0,monthlyInv:100,ret401k:0,creditScore:700,emergFund:0,wantsHouse:false,wantsMarriage:false,dualIncome:0,neighborhood:null,homeSize:null,homePrice:0,downPay:0,mortPay:0,hasHomeIns:false,homeInsMo:0,carInsType:"full",carDeductible:1000,carInsMo:0,intRate:6.8,invAlloc:{},avgRet:.08,simResult:null,teacherBoosts:[],teacherEvents:[],teacherMktMod:0,teacherRate:6.8,teacherAcctBoost:0,age:18,yearsElapsed:0,totalInvested:0,totalRetirement:0,phase:"welcome"};
 
-function App(){
+export default function App(){
 const[phase,sP]=useState("login");
 const[pd,sPd]=useState({...initPd});
 const[students,sSt]=useState([]);
@@ -549,7 +535,3 @@ return<div style={{minHeight:"100vh",background:C.bg,fontFamily:F.b}}>
 {phase==="retirement"&&<RetirementPhase onDone={()=>go("summary")} pd={pd}/>}
 {phase==="summary"&&<SummaryPhase pd={pd} onRestart={restart} onTeacher={goTeacher}/>}
 </div>}
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
-</script>
-</body>
-</html>
