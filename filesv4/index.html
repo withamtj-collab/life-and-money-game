@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Life & Money - Financial Literacy Game</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Libre Franklin',sans-serif}</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect,useCallback}=React;
+const C={bg:"#f4f2ed",card:"#fff",dk:"#1a1a2e",dk2:"#16213e",g:"#0f9b58",gd:"#0a7a44",gl:"#e8f5e9",r:"#c62828",rl:"#ffebee",w:"#e65100",wl:"#fff3e0",b:"#0277bd",bl:"#e1f5fe",m:"#78909c",br:"#e0ddd5",t:"#263238",tl:"#607d8b"};
+const F={d:"'Fraunces',serif",b:"'Libre Franklin',sans-serif"};
+const bp={padding:"12px 26px",borderRadius:10,border:"none",background:`linear-gradient(135deg,${C.g},${C.gd})`,color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:F.b,boxShadow:"0 2px 10px rgba(15,155,88,.25)"};
+const bs={padding:"12px 26px",borderRadius:10,border:`2px solid ${C.br}`,background:C.card,color:C.t,fontWeight:700,fontSize:14,cursor:"pointer",fontFamily:F.b};
+const fmt=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",minimumFractionDigits:0,maximumFractionDigits:0}).format(n);
+const fD=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",minimumFractionDigits:2,maximumFractionDigits:2}).format(n);
+const TB=[{mn:0,mx:11600,r:.10},{mn:11600,mx:47150,r:.12},{mn:47150,mx:100525,r:.22},{mn:100525,mx:191950,r:.24}];
+function fedTax(a){let t=0;for(const b of TB){if(a<=b.mn)break;t+=(Math.min(a,b.mx)-b.mn)*b.r}return t}
+function ps(s,retPct){const rp=retPct||.06;const m=s/12,r4=m*rp,taxable=s*(1-rp),ft=fedTax(taxable)/12,st=m*.05,ss=m*.062,mc=m*.0145,hi=280,td=ft+st+ss+mc+hi+r4;return{gross:m,ft,st,ss,mc,hi,r4,rp,td,net:m-td}}
+const TEACHER_USER="teacher";const TEACHER_PASS="money2025";
+const INTERESTS=[{id:"creative",l:"Creative & Arts",i:"🎨",d:"Design, music, writing"},{id:"tech",l:"Technology",i:"💻",d:"Coding, engineering, data"},{id:"people",l:"People & Service",i:"🤝",d:"Teaching, counseling, social work"},{id:"business",l:"Business & Finance",i:"📊",d:"Management, marketing"},{id:"science",l:"Science & Research",i:"🔬",d:"Biology, chemistry, environment"},{id:"trades",l:"Skilled Trades",i:"🔧",d:"Electrical, plumbing, construction"},{id:"law",l:"Law & Government",i:"⚖️",d:"Legal, policy, public service"},{id:"health",l:"Health & Wellness",i:"🏥",d:"Medicine, nursing, therapy"},{id:"media",l:"Media & Comms",i:"📱",d:"Journalism, PR, social media"},{id:"education",l:"Education",i:"📚",d:"Teaching, training, curriculum"}];
+const MOTIVATIONS=[{id:"money",l:"High Earning",i:"💰"},{id:"impact",l:"Making a Difference",i:"🌍"},{id:"balance",l:"Work-Life Balance",i:"⚖️"},{id:"passion",l:"Follow Passion",i:"❤️"},{id:"security",l:"Job Security",i:"🛡️"},{id:"growth",l:"Career Growth",i:"📈"}];
+const EP=[
+{id:"ivy",t:"Elite Private University",cost:280000,mo:2800,dur:"4 years",sm:1.15,d:"Top-tier private. Think Ivy League.",pros:["Elite networking","Highest starting salaries","Brand recognition","Research access"],cons:["$280K debt","$2,800/mo payments","Extreme pressure","ROI varies by major"]},
+{id:"four_out",t:"Out-of-State Public Univ",cost:160000,mo:1600,dur:"4 years",sm:1.05,d:"Public university in another state.",pros:["Broader perspective","Strong degree","Campus life","Good career services"],cons:["$160K debt","$1,600/mo payments","Higher living costs","Out-of-state tuition"]},
+{id:"four_in",t:"In-State Public University",cost:100000,mo:1000,dur:"4 years",sm:1.0,d:"Solid state university close to home.",pros:["Recognized degree","Lower cost","Live at home option","Local connections"],cons:["$100K debt","$1,000/mo payments","May limit mobility","4 years to earn"]},
+{id:"community",t:"Community College → Transfer",cost:50000,mo:500,dur:"4 yrs (2+2)",sm:.95,d:"Start at CC, transfer for bachelor's.",pros:["Same degree, 50%+ less debt","Small classes","Work while studying","Explore cheaply"],cons:["$50K debt","May miss campus life","Transfer complexity","Some employer bias"]},
+{id:"trade",t:"Trade School / Apprenticeship",cost:20000,mo:200,dur:"1-2 years",sm:.85,d:"Hands-on training for skilled trades.",pros:["Only $20K debt","Earn in 1-2 years","Huge demand","$80K+ with experience"],cons:["Trade careers only","Physical work","Ongoing certs needed","Less flexibility"]},
+{id:"online",t:"Online Univ / Bootcamp",cost:30000,mo:300,dur:"2-3 years",sm:.88,d:"Flexible online programs or bootcamps.",pros:["Low cost, flexible","Work full-time","Growing acceptance","Career-focused"],cons:["$30K debt","Less networking","Needs discipline","Quality varies"]},
+{id:"military",t:"Military → GI Bill",cost:0,mo:0,dur:"4+ yrs service",sm:.92,d:"Serve, then free college via GI Bill.",pros:["Zero debt","Free college after","Veteran preference","Leadership skills"],cons:["4+ year commitment","Risk & sacrifice","Delayed career","Tough transition"]},
+{id:"workforce",t:"Straight to Workforce",cost:0,mo:0,dur:"Immediate",sm:.7,d:"Start working right away.",pros:["Zero debt","Immediate income","Real experience","Pivot anytime"],cons:["Lower starting pay","Fewer options","Earnings ceiling","Self-ed required"]}];
+const CS={
+ivy:[{t:"Software Engineer (FAANG)",s:120000,f:"tech"},{t:"Investment Banking Analyst",s:110000,f:"business"},{t:"Management Consultant",s:95000,f:"business"},{t:"Data Scientist",s:105000,f:"tech"},{t:"Physician Assistant",s:98000,f:"health"},{t:"Corporate Attorney",s:100000,f:"law"},{t:"UX Research Lead",s:95000,f:"creative"},{t:"Biomedical Researcher",s:78000,f:"science"},{t:"Public Policy Analyst",s:72000,f:"law"},{t:"University Professor",s:80000,f:"education"},{t:"Broadcast Journalist",s:68000,f:"media"},{t:"Nonprofit Director",s:70000,f:"people"}],
+four_out:[{t:"Software Developer",s:92000,f:"tech"},{t:"Marketing Manager",s:72000,f:"business"},{t:"Registered Nurse (BSN)",s:78000,f:"health"},{t:"Financial Analyst",s:70000,f:"business"},{t:"Mechanical Engineer",s:82000,f:"tech"},{t:"Clinical Psychologist",s:75000,f:"people"},{t:"Environmental Scientist",s:62000,f:"science"},{t:"Art Director",s:68000,f:"creative"},{t:"PR Specialist",s:58000,f:"media"},{t:"HS Teacher",s:55000,f:"education"},{t:"Probation Officer",s:52000,f:"law"},{t:"Project Manager",s:75000,f:"business"}],
+four_in:[{t:"Software Developer",s:85000,f:"tech"},{t:"Marketing Coordinator",s:58000,f:"business"},{t:"Registered Nurse",s:75000,f:"health"},{t:"Accountant (CPA)",s:65000,f:"business"},{t:"HS Teacher",s:52000,f:"education"},{t:"Lab Scientist",s:58000,f:"science"},{t:"Graphic Designer",s:50000,f:"creative"},{t:"Paralegal",s:55000,f:"law"},{t:"Social Worker",s:50000,f:"people"},{t:"IT Systems Admin",s:68000,f:"tech"},{t:"Content Writer",s:48000,f:"media"},{t:"PT Assistant",s:55000,f:"health"}],
+community:[{t:"Software Developer",s:80000,f:"tech"},{t:"Bookkeeper",s:48000,f:"business"},{t:"Registered Nurse",s:72000,f:"health"},{t:"Marketing Assistant",s:45000,f:"business"},{t:"Teaching Assistant",s:38000,f:"education"},{t:"Lab Technician",s:48000,f:"science"},{t:"Graphic Designer",s:46000,f:"creative"},{t:"Legal Secretary",s:45000,f:"law"},{t:"Social Media Mgr",s:48000,f:"media"},{t:"Mental Health Aide",s:38000,f:"people"},{t:"Web Developer",s:62000,f:"tech"},{t:"Dental Hygienist",s:72000,f:"health"}],
+trade:[{t:"Electrician",s:65000,f:"trades"},{t:"Plumber",s:62000,f:"trades"},{t:"HVAC Technician",s:58000,f:"trades"},{t:"Welder",s:52000,f:"trades"},{t:"Dental Hygienist",s:72000,f:"health"},{t:"Auto Technician",s:48000,f:"trades"},{t:"Construction Manager",s:72000,f:"trades"},{t:"Cosmetologist",s:38000,f:"creative"},{t:"CNC Machinist",s:55000,f:"trades"},{t:"Surgical Tech",s:56000,f:"health"},{t:"Diesel Mechanic",s:55000,f:"trades"},{t:"Elevator Installer",s:78000,f:"trades"}],
+online:[{t:"Web Developer",s:72000,f:"tech"},{t:"Digital Marketer",s:55000,f:"business"},{t:"UX/UI Designer",s:68000,f:"creative"},{t:"Data Analyst",s:62000,f:"tech"},{t:"Cybersecurity Analyst",s:75000,f:"tech"},{t:"Medical Coder",s:48000,f:"health"},{t:"Online Tutor",s:42000,f:"education"},{t:"Freelance Writer",s:45000,f:"media"},{t:"HR Specialist",s:52000,f:"people"},{t:"Project Coordinator",s:50000,f:"business"},{t:"IT Help Desk Mgr",s:55000,f:"tech"},{t:"Virtual Asst Mgr",s:45000,f:"business"}],
+military:[{t:"Cybersecurity Specialist",s:82000,f:"tech"},{t:"Logistics Manager",s:68000,f:"business"},{t:"Aviation Mechanic",s:62000,f:"trades"},{t:"VA Nurse",s:72000,f:"health"},{t:"Federal Law Enforcement",s:70000,f:"law"},{t:"Intelligence Analyst",s:75000,f:"tech"},{t:"Paramedic",s:48000,f:"health"},{t:"Defense Contractor",s:85000,f:"tech"},{t:"JROTC Instructor",s:55000,f:"education"},{t:"Government Admin",s:58000,f:"law"},{t:"Firefighter",s:52000,f:"people"},{t:"Construction Foreman",s:60000,f:"trades"}],
+workforce:[{t:"Retail Manager",s:45000,f:"business"},{t:"Admin Assistant",s:38000,f:"business"},{t:"Sales Rep",s:48000,f:"people"},{t:"Customer Service Lead",s:38000,f:"people"},{t:"Restaurant Manager",s:50000,f:"business"},{t:"Real Estate Agent",s:55000,f:"business"},{t:"Freelance Designer",s:42000,f:"creative"},{t:"Landscaping Owner",s:50000,f:"trades"},{t:"Insurance Agent",s:52000,f:"business"},{t:"Childcare Director",s:40000,f:"people"},{t:"Content Creator",s:35000,f:"media"},{t:"Personal Trainer",s:40000,f:"health"}]};
+const HOODS=[
+{n:"Erlanger",dist:"0 mi",tx:.0107,sm:175000,md:240000,lg:340000,hoa:0,d:"Affordable, family-friendly"},
+{n:"Florence",dist:"5 mi",tx:.0098,sm:195000,md:275000,lg:385000,hoa:0,d:"Shopping, dining, jobs"},
+{n:"Crestview Hills",dist:"3 mi",tx:.0112,sm:250000,md:350000,lg:520000,hoa:75,d:"Upscale, near university"},
+{n:"Edgewood",dist:"2 mi",tx:.0115,sm:220000,md:310000,lg:450000,hoa:50,d:"Great schools, hospitals"},
+{n:"Fort Mitchell",dist:"3 mi",tx:.0118,sm:235000,md:325000,lg:475000,hoa:0,d:"Charming, top schools"},
+{n:"Covington",dist:"6 mi",tx:.0133,sm:155000,md:215000,lg:350000,hoa:0,d:"Urban, historic district"},
+{n:"Crescent Springs",dist:"4 mi",tx:.011,sm:230000,md:320000,lg:460000,hoa:65,d:"Quiet, easy highway"},
+{n:"Independence",dist:"8 mi",tx:.0095,sm:210000,md:290000,lg:400000,hoa:45,d:"Newer developments"},
+{n:"Burlington",dist:"10 mi",tx:.0092,sm:225000,md:310000,lg:430000,hoa:50,d:"Boone Co schools"},
+{n:"Villa Hills",dist:"4 mi",tx:.012,sm:260000,md:360000,lg:550000,hoa:0,d:"Premium, river views"}];
+const IO=[
+{id:"sp500",n:"S&P 500 Index",risk:"Medium",ar:.10,vol:.16,i:"📈",d:"500 largest US companies"},
+{id:"bonds",n:"US Bond Fund",risk:"Low",ar:.04,vol:.04,i:"🏛️",d:"Government & corporate bonds"},
+{id:"growth",n:"Growth Tech",risk:"High",ar:.14,vol:.25,i:"🚀",d:"High-growth tech stocks"},
+{id:"reit",n:"Real Estate REIT",risk:"Medium",ar:.08,vol:.12,i:"🏘️",d:"Real estate trusts"},
+{id:"intl",n:"International",risk:"Med-High",ar:.09,vol:.18,i:"🌍",d:"Non-US companies"},
+{id:"hysa",n:"High-Yield Savings",risk:"Very Low",ar:.045,vol:.005,i:"🏦",d:"FDIC insured, safe"}];
+const LEP={pos:[{t:"Holiday bonus!",a:2500},{t:"Tax refund!",a:1800},{t:"Side hustle paid off!",a:1200}],neg:[{t:"Car transmission failed",a:-2800},{t:"ER visit — medical bill",a:-3200},{t:"Roof leak — emergency!",a:-4500},{t:"Identity theft fees",a:-1500},{t:"IRS tax bill",a:-1200},{t:"Pet emergency surgery",a:-2000}],neu:[{t:"Friend's destination wedding",a:-800},{t:"Car insurance increase",a:-400},{t:"New tires needed",a:-600}]};
+const LIFE_ERA={
+era1:{yrs:4,age:22,label:"College Years (4 years)",events:[
+{t:"Laptop died — had to replace",a:-900,icon:"💻"},{t:"Scholarship award!",a:2000,icon:"🎓"},{t:"Car accident — deductible",a:-1000,icon:"🚗"},{t:"Summer internship bonus",a:1500,icon:"💼"},{t:"Parking tickets piled up",a:-400,icon:"🅿️"},{t:"Won campus competition!",a:500,icon:"🏆"},{t:"Phone screen shattered",a:-300,icon:"📱"},{t:"Birthday money from family",a:250,icon:"🎂"}]},
+era2:{yrs:5,age:27,label:"Early Career (5 years)",events:[
+{t:"Performance bonus!",a:3000,icon:"⭐"},{t:"Car transmission failed",a:-2800,icon:"🔧"},{t:"ER visit — no fun",a:-3200,icon:"🏥"},{t:"Side hustle income",a:2000,icon:"💰"},{t:"Speeding ticket + insurance hike",a:-800,icon:"🚨"},{t:"Friend's wedding trip",a:-1200,icon:"✈️"},{t:"Tax refund!",a:1800,icon:"📋"},{t:"New tires + brakes",a:-900,icon:"🚗"},{t:"Got a certification bonus",a:1500,icon:"📜"},{t:"Identity theft fees",a:-1500,icon:"🔓"}]},
+era3:{yrs:11,age:38,label:"Building Wealth (11 years)",events:[
+{t:"Promotion + raise!",a:8000,icon:"📈"},{t:"Roof replacement",a:-6500,icon:"🏚️"},{t:"New baby expenses",a:-4000,icon:"👶"},{t:"Inheritance from relative",a:10000,icon:"🏛️"},{t:"HVAC system died",a:-5000,icon:"❄️"},{t:"Refinanced at lower rate — savings",a:3000,icon:"🏦"},{t:"Kid's braces",a:-3500,icon:"😁"},{t:"Stock market dip — portfolio lost",a:-5000,icon:"📉"},{t:"Home value increased — equity gain",a:12000,icon:"🏠"},{t:"Medical procedure copay",a:-2500,icon:"💊"},{t:"Annual bonus streak",a:6000,icon:"🎯"},{t:"Car totaled — deductible + replacement",a:-4500,icon:"💥"},{t:"Pet emergency surgery",a:-2000,icon:"🐕"},{t:"Freelance project income",a:3500,icon:"💻"}]}
+};
+// Shared UI
+function Ph({title,sub,children}){return<div style={{maxWidth:960,margin:"0 auto",padding:"28px 20px 48px"}}><h2 style={{fontFamily:F.d,fontSize:"clamp(22px,4vw,32px)",fontWeight:800,color:C.dk,margin:"0 0 4px"}}>{title}</h2>{sub&&<p style={{color:C.tl,fontSize:14,margin:"0 0 22px",lineHeight:1.5}}>{sub}</p>}{children}</div>}
+function Fd({children}){const[v,sV]=useState(false);useEffect(()=>{requestAnimationFrame(()=>sV(true))},[]);return<div style={{opacity:v?1:0,transform:v?"none":"translateY(8px)",transition:"all .35s ease-out"}}>{children}</div>}
+function Tg({c,l}){return<span style={{fontSize:10,fontWeight:700,color:c,background:`${c}18`,padding:"2px 8px",borderRadius:5,whiteSpace:"nowrap"}}>{l}</span>}
+function SC({icon,label,value,sub,vc}){return<div style={{background:C.card,borderRadius:12,padding:14,border:`1px solid ${C.br}`}}><div style={{fontSize:22}}>{icon}</div><div style={{fontSize:9,color:C.m,fontWeight:700,textTransform:"uppercase",letterSpacing:.7,marginTop:3}}>{label}</div><div style={{fontSize:16,fontWeight:800,color:vc||C.dk,marginTop:3}}>{value}</div>{sub&&<div style={{fontSize:11,color:C.tl,marginTop:1}}>{sub}</div>}</div>}
+function IB({c,icon,title,children}){const bg=c==="g"?C.gl:c==="r"?C.rl:c==="y"?C.wl:C.bl,tc=c==="g"?"#1b5e20":c==="r"?"#b71c1c":c==="y"?"#e65100":"#01579b";return<div style={{background:bg,borderRadius:11,padding:14,marginBottom:14,border:`1px solid ${tc}22`}}><div style={{fontWeight:700,color:tc,fontSize:13}}>{icon} {title}</div><div style={{fontSize:12,color:tc,marginTop:3,lineHeight:1.5}}>{children}</div></div>}
+
+// Enhanced Pause Screen with time passage, life events, and savings growth
+function PauseScreen({title,msg,onCont,locked,era,pd,onUpdatePd}){
+const[step,sStep]=useState(0);// 0=locked/waiting, 1=time intro, 2=events, 3=savings summary
+const[evts,sEvts]=useState([]);const[evtIdx,sEI]=useState(0);const[revealed,sRev]=useState(false);const[runSav,sRS]=useState(0);const[evtTotal,sET]=useState(0);
+
+useEffect(()=>{if(!era)return;const pool=[...era.events];for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}const count=era.yrs>=10?4:era.yrs>=5?3:2;sEvts(pool.slice(0,count))},[era]);
+
+useEffect(()=>{if(!era||!pd)return;const moSave=(pd.monthlySave||0)+(pd.monthlyInv||0);const retMo=pd.ret401k||ps(pd.salary||0,pd.retPct||.06).r4;const savGrowth=moSave*12*era.yrs;const retGrowth=retMo*((Math.pow(1+.07/12,era.yrs*12)-1)/(.07/12));sRS(Math.round(savGrowth+retGrowth))},[era,pd]);
+
+const revealEvent=()=>{sRev(true);sET(t=>t+(evts[evtIdx]?.a||0))};
+const nextEvent=()=>{if(evtIdx+1<evts.length){sEI(i=>i+1);sRev(false)}else{sStep(3)}};
+const finalize=()=>{if(onUpdatePd&&era){onUpdatePd(d=>{const moSave=(d.monthlySave||0);const moInv=(d.monthlyInv||0);const retMo=d.ret401k||ps(d.salary||0,d.retPct||.06).r4;const savAccum=moSave*12*era.yrs;const invAccum=moInv*12*era.yrs;const retAccum=retMo*((Math.pow(1+.07/12,era.yrs*12)-1)/(.07/12));const debtPaid=Math.min((d.loanMo||0)*12*era.yrs,d.debt||0);return{...d,emergFund:(d.emergFund||0)+savAccum+evtTotal,totalInvested:(d.totalInvested||0)+invAccum,totalRetirement:(d.totalRetirement||0)+retAccum,debt:Math.max(0,(d.debt||0)-debtPaid),age:(d.age||18)+era.yrs,yearsElapsed:(d.yearsElapsed||0)+era.yrs}})}};
+
+if(locked&&step===0)return<Ph title=""><div style={{textAlign:"center",padding:"50px 20px",background:`linear-gradient(135deg,${C.dk},${C.dk2})`,borderRadius:22,color:"#fff"}}><div style={{fontSize:56,marginBottom:14}}>⏸️</div><h2 style={{fontFamily:F.d,fontSize:26,margin:"0 0 10px",fontWeight:800}}>{title}</h2><p style={{color:"#a0aec0",fontSize:14,maxWidth:480,margin:"0 auto 24px",lineHeight:1.5}}>{msg}</p><div style={{background:"rgba(255,255,255,.1)",borderRadius:10,padding:"14px 22px",display:"inline-block"}}><div style={{fontSize:13,color:"#fbbf24",fontWeight:700}}>🔒 Waiting for teacher to unlock...</div><div style={{fontSize:11,color:"#94a3b8",marginTop:3}}>Progress saved. Teacher will discuss first.</div></div></div></Ph>;
+
+if(!locked&&step===0&&era){setTimeout(()=>sStep(1),100)}
+if(!locked&&step===0&&!era)return<Ph title=""><div style={{textAlign:"center",padding:"50px 20px",background:`linear-gradient(135deg,${C.dk},${C.dk2})`,borderRadius:22,color:"#fff"}}><div style={{fontSize:56,marginBottom:14}}>✅</div><h2 style={{fontFamily:F.d,fontSize:26,margin:"0 0 10px",fontWeight:800}}>{title}</h2><button onClick={onCont} style={{...bp,background:"linear-gradient(135deg,#fbbf24,#f59e0b)",color:C.dk,fontSize:15,padding:"12px 32px"}}>Continue →</button></div></Ph>;
+
+if(step===1)return<Ph title=""><Fd><div style={{textAlign:"center",padding:"40px 20px",background:`linear-gradient(135deg,${C.dk},${C.dk2})`,borderRadius:22,color:"#fff"}}>
+<div style={{fontSize:56,marginBottom:10}}>⏳</div>
+<h2 style={{fontFamily:F.d,fontSize:28,margin:"0 0 6px",fontWeight:800}}>{era.yrs} Years Pass...</h2>
+<p style={{color:"#80cbc4",fontSize:15,margin:"0 0 6px"}}>{era.label}</p>
+<p style={{color:"#a0aec0",fontSize:13,margin:"0 0 20px"}}>You're now {era.age} years old. Life happened along the way.</p>
+<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:8,maxWidth:500,margin:"0 auto 20px",textAlign:"center"}}>
+{pd?.salary>0&&<div style={{background:"rgba(255,255,255,.08)",borderRadius:10,padding:10}}><div style={{fontSize:9,color:"#90a4ae"}}>Salary</div><div style={{fontSize:14,fontWeight:800,color:"#66bb6a"}}>{fmt(pd.salary)}</div></div>}
+{(pd?.monthlySave||0)>0&&<div style={{background:"rgba(255,255,255,.08)",borderRadius:10,padding:10}}><div style={{fontSize:9,color:"#90a4ae"}}>Monthly Savings</div><div style={{fontSize:14,fontWeight:800,color:"#42a5f5"}}>{fD(pd.monthlySave)}</div></div>}
+{(pd?.debt||0)>0&&<div style={{background:"rgba(255,255,255,.08)",borderRadius:10,padding:10}}><div style={{fontSize:9,color:"#90a4ae"}}>Remaining Debt</div><div style={{fontSize:14,fontWeight:800,color:"#ef5350"}}>{fmt(pd.debt)}</div></div>}
+</div>
+<button onClick={()=>sStep(2)} style={{...bp,background:"linear-gradient(135deg,#fbbf24,#f59e0b)",color:C.dk,fontSize:14,padding:"12px 28px"}}>See What Happened →</button>
+</div></Fd></Ph>;
+
+if(step===2){const ev=evts[evtIdx];return<Ph title=""><Fd><div style={{textAlign:"center",padding:"30px 20px",background:`linear-gradient(135deg,${C.dk},${C.dk2})`,borderRadius:22,color:"#fff"}}>
+<div style={{fontSize:10,color:"#78909c",marginBottom:8}}>Life Event {evtIdx+1} of {evts.length}</div>
+<div style={{display:"flex",justifyContent:"center",gap:4,marginBottom:12}}>{evts.map((_,i)=><div key={i} style={{width:24,height:4,borderRadius:2,background:i<evtIdx?"#66bb6a":i===evtIdx?"#fbbf24":"rgba(255,255,255,.15)"}}/>)}</div>
+{!revealed?<>
+<div style={{fontSize:52,marginBottom:8}}>🎲</div>
+<div style={{fontSize:14,color:"#a0aec0",marginBottom:16}}>Something happened in year {Math.ceil((evtIdx+1)*(era.yrs/evts.length))}...</div>
+<button onClick={revealEvent} style={{...bp,background:"linear-gradient(135deg,#fbbf24,#f59e0b)",color:C.dk,fontSize:14,padding:"12px 28px"}}>Reveal →</button>
+</>:<>
+<div style={{fontSize:48,marginBottom:6}}>{ev.icon||"📋"}</div>
+<div style={{fontSize:18,fontWeight:700,marginBottom:6}}>{ev.t}</div>
+<div style={{fontSize:28,fontWeight:800,color:ev.a>0?"#66bb6a":"#ef5350",fontFamily:F.d}}>{ev.a>0?"+":""}{fmt(ev.a)}</div>
+<div style={{fontSize:11,color:"#90a4ae",marginTop:8}}>Running impact: <strong style={{color:evtTotal+ev.a>=0?"#66bb6a":"#ef5350"}}>{evtTotal>=0?"+":""}{fmt(evtTotal)}</strong></div>
+<button onClick={nextEvent} style={{...bp,marginTop:14,fontSize:13}}>{evtIdx+1<evts.length?"Next Event →":"See Summary →"}</button>
+</>}
+</div></Fd></Ph>}
+
+if(step===3){const moSave=pd?.monthlySave||0;const moInv=pd?.monthlyInv||0;const retMo=pd?.ret401k||0;const savAccum=moSave*12*era.yrs;const invGrowth=moInv*((Math.pow(1+.08/12,era.yrs*12)-1)/(.08/12));const retGrowth=retMo*((Math.pow(1+.07/12,era.yrs*12)-1)/(.07/12));const debtPaid=Math.min((pd?.loanMo||0)*12*era.yrs,pd?.debt||0);
+return<Ph title=""><Fd><div style={{padding:"30px 20px",background:`linear-gradient(135deg,${C.dk},${C.dk2})`,borderRadius:22,color:"#fff"}}>
+<div style={{textAlign:"center",marginBottom:16}}><div style={{fontSize:44}}>📊</div><h2 style={{fontFamily:F.d,fontSize:22,margin:"6px 0 2px"}}>{era.yrs}-Year Financial Summary</h2><p style={{color:"#80cbc4",fontSize:12}}>Age {era.age-era.yrs} → {era.age}</p></div>
+
+<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:8,marginBottom:14}}>
+{savAccum>0&&<div style={{background:"rgba(255,255,255,.08)",borderRadius:10,padding:12,textAlign:"center"}}><div style={{fontSize:9,color:"#90a4ae"}}>🛡️ Emergency Saved</div><div style={{fontSize:16,fontWeight:800,color:"#42a5f5"}}>{fmt(Math.round(savAccum))}</div><div style={{fontSize:9,color:"#64b5f6"}}>{fD(moSave)}/mo × {era.yrs}yr</div></div>}
+{moInv>0&&<div style={{background:"rgba(255,255,255,.08)",borderRadius:10,padding:12,textAlign:"center"}}><div style={{fontSize:9,color:"#90a4ae"}}>📈 Investments Grown</div><div style={{fontSize:16,fontWeight:800,color:"#ab47bc"}}>{fmt(Math.round(invGrowth))}</div><div style={{fontSize:9,color:"#ce93d8"}}>{fD(moInv)}/mo + growth</div></div>}
+{retMo>0&&<div style={{background:"rgba(255,255,255,.08)",borderRadius:10,padding:12,textAlign:"center"}}><div style={{fontSize:9,color:"#90a4ae"}}>🏦 401(k) Growth</div><div style={{fontSize:16,fontWeight:800,color:"#66bb6a"}}>{fmt(Math.round(retGrowth))}</div><div style={{fontSize:9,color:"#81c784"}}>{fD(retMo)}/mo + compound</div></div>}
+{debtPaid>0&&<div style={{background:"rgba(255,255,255,.08)",borderRadius:10,padding:12,textAlign:"center"}}><div style={{fontSize:9,color:"#90a4ae"}}>💳 Debt Paid Off</div><div style={{fontSize:16,fontWeight:800,color:"#fbbf24"}}>{fmt(Math.round(debtPaid))}</div><div style={{fontSize:9,color:"#fdd835"}}>{pd.debt-debtPaid<=0?"✅ Debt free!":fmt(pd.debt-debtPaid)+" left"}</div></div>}
+<div style={{background:"rgba(255,255,255,.08)",borderRadius:10,padding:12,textAlign:"center"}}><div style={{fontSize:9,color:"#90a4ae"}}>🎲 Life Events Impact</div><div style={{fontSize:16,fontWeight:800,color:evtTotal>=0?"#66bb6a":"#ef5350"}}>{evtTotal>=0?"+":""}{fmt(evtTotal)}</div><div style={{fontSize:9,color:"#90a4ae"}}>{evts.length} events</div></div>
+</div>
+
+<div style={{background:"rgba(255,255,255,.06)",borderRadius:12,padding:14,textAlign:"center",marginBottom:16}}>
+<div style={{fontSize:11,color:"#90a4ae"}}>Net Financial Change Over {era.yrs} Years</div>
+<div style={{fontSize:30,fontWeight:800,color:"#66bb6a",fontFamily:F.d}}>+{fmt(Math.round(savAccum+invGrowth+retGrowth+evtTotal-debtPaid))}</div>
+</div>
+<div style={{textAlign:"center"}}><button onClick={()=>{finalize();onCont()}} style={{...bp,background:"linear-gradient(135deg,#fbbf24,#f59e0b)",color:C.dk,fontSize:15,padding:"12px 32px"}}>Continue Journey →</button></div>
+</div></Fd></Ph>}
+
+return null}
+
+// PHASE: Welcome
+function Welcome({onStart,onTeacher}){const[sh,sSh]=useState(false);useEffect(()=>{setTimeout(()=>sSh(true),80)},[]);return<div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"linear-gradient(160deg,#0a0e27,#1a2744 40%,#0a3d2e)",fontFamily:F.b,padding:24,opacity:sh?1:0,transition:"opacity .7s"}}><div style={{fontSize:60,marginBottom:10}}>💸</div><h1 style={{fontFamily:F.d,fontSize:"clamp(36px,6vw,56px)",fontWeight:900,color:"#e8f5e9",textAlign:"center",margin:0,lineHeight:1.05}}>Life & Money</h1><p style={{color:"#80cbc4",fontSize:16,textAlign:"center",maxWidth:520,margin:"12px 0 32px",lineHeight:1.5}}>Navigate 20 years of financial decisions — education, careers, housing, investing, and retirement.</p><div style={{display:"flex",gap:12,flexWrap:"wrap",justifyContent:"center"}}><button onClick={onStart} style={{...bp,padding:"13px 30px",fontSize:15}}>🎮 Start Journey</button><button onClick={onTeacher} style={{...bs,background:"rgba(255,255,255,.08)",color:"#a5d6a7",borderColor:"rgba(255,255,255,.15)"}}>🍎 Teacher Dashboard</button></div></div>}
+// PHASE: Interests
+function InterestsPhase({onDone,pd,setPd}){const[si,sSi]=useState(pd.interests||[]);const[sm,sSm]=useState(pd.motivations||[]);const[step,sS]=useState(0);const[name,sN]=useState(pd.name||"");const tI=id=>sSi(p=>p.includes(id)?p.filter(x=>x!==id):p.length<3?[...p,id]:p);const tM=id=>sSm(p=>p.includes(id)?p.filter(x=>x!==id):p.length<2?[...p,id]:p);const nx=()=>{if(step===0&&name.trim())sS(1);else if(step===1&&si.length>=1)sS(2);else if(step===2&&sm.length>=1){setPd(d=>({...d,name,interests:si,motivations:sm}));onDone()}};const dis=(step===0&&!name.trim())||(step===1&&si.length<1)||(step===2&&sm.length<1);
+return<Ph title="Who Are You?" sub="Discover what drives you — this shapes career matches.">
+{step===0&&<Fd><label style={{display:"block",color:C.tl,fontSize:14,fontWeight:600,marginBottom:8}}>Your name:</label><input value={name} onChange={e=>sN(e.target.value)} placeholder="Enter name..." onKeyDown={e=>e.key==="Enter"&&nx()} style={{width:"100%",padding:"13px 16px",fontSize:18,border:`2px solid ${C.br}`,borderRadius:11,outline:"none",fontFamily:F.b,boxSizing:"border-box"}} onFocus={e=>e.target.style.borderColor=C.g} onBlur={e=>e.target.style.borderColor=C.br}/></Fd>}
+{step===1&&<Fd><p style={{color:C.tl,marginBottom:12}}>Pick up to 3 interests:</p><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(165px,1fr))",gap:9}}>{INTERESTS.map(c=>{const s=si.includes(c.id);return<button key={c.id} onClick={()=>tI(c.id)} style={{padding:12,borderRadius:11,border:s?`2px solid ${C.g}`:`2px solid ${C.br}`,background:s?C.gl:C.card,cursor:"pointer",textAlign:"left",fontFamily:F.b}}><div style={{fontSize:20}}>{c.i}</div><div style={{fontWeight:700,fontSize:12,color:C.dk,marginTop:3}}>{c.l}</div><div style={{fontSize:10,color:C.tl}}>{c.d}</div></button>})}</div></Fd>}
+{step===2&&<Fd><p style={{color:C.tl,marginBottom:12}}>Top motivations (pick 2):</p><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(155px,1fr))",gap:9}}>{MOTIVATIONS.map(m=>{const s=sm.includes(m.id);return<button key={m.id} onClick={()=>tM(m.id)} style={{padding:"12px 14px",borderRadius:11,border:s?`2px solid ${C.b}`:`2px solid ${C.br}`,background:s?C.bl:C.card,cursor:"pointer",textAlign:"left",fontFamily:F.b}}><span style={{fontSize:20}}>{m.i}</span><div style={{fontWeight:600,fontSize:12,color:C.dk,marginTop:3}}>{m.l}</div></button>})}</div></Fd>}
+<div style={{marginTop:18,display:"flex",justifyContent:"flex-end"}}><button onClick={nx} disabled={dis} style={{...bp,opacity:dis?.4:1}}>{step===2?"Continue →":"Next →"}</button></div></Ph>}
+
+// PHASE: Education
+function EducationPhase({onDone,pd,setPd}){const[sel,sSel]=useState(null);const[showPC,sPC]=useState(false);const go=()=>{const p=EP.find(x=>x.id===sel);setPd(d=>({...d,edPath:sel,debt:p.cost,loanMo:p.mo,salMul:p.sm}));onDone()};
+return<Ph title="Education Decision" sub="Choose wisely — this shapes your debt and career options.">
+<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(215px,1fr))",gap:9,marginBottom:14}}>{EP.map(p=>{const s=sel===p.id;return<button key={p.id} onClick={()=>sSel(p.id)} style={{padding:14,borderRadius:12,border:s?`3px solid ${C.g}`:`2px solid ${C.br}`,background:s?C.gl:C.card,cursor:"pointer",textAlign:"left",fontFamily:F.b,boxShadow:s?`0 3px 14px ${C.g}22`:"none"}}><div style={{fontWeight:800,fontSize:13,color:C.dk,marginBottom:2}}>{p.t}</div><div style={{fontSize:10,color:C.tl,lineHeight:1.3,marginBottom:7}}>{p.d}</div><div style={{display:"flex",gap:3,flexWrap:"wrap"}}><Tg c={C.r} l={fmt(p.cost)}/><Tg c={C.b} l={p.dur}/><Tg c="#7b1fa2" l={p.mo>0?`${fmt(p.mo)}/mo`:"$0"}/></div></button>})}</div>
+{sel&&<Fd><button onClick={()=>sPC(!showPC)} style={{...bs,marginBottom:10,fontSize:11,padding:"5px 12px"}}>{showPC?"Hide":"Show"} Pros & Cons</button>
+{showPC&&(()=>{const p=EP.find(x=>x.id===sel);return<div style={{background:"#f8f7f4",borderRadius:12,padding:14,marginBottom:10,display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}><div><h4 style={{color:C.g,margin:"0 0 5px",fontSize:12}}>✅ Pros</h4>{p.pros.map((x,i)=><div key={i} style={{fontSize:11,color:C.t,padding:"1px 0"}}>• {x}</div>)}</div><div><h4 style={{color:C.r,margin:"0 0 5px",fontSize:12}}>❌ Cons</h4>{p.cons.map((x,i)=><div key={i} style={{fontSize:11,color:C.t,padding:"1px 0"}}>• {x}</div>)}</div></div>})()}
+<IB c="y" icon="💡" title="Total Debt Cost">{(()=>{const p=EP.find(x=>x.id===sel);const tot=p.mo*120;return tot>0?`${fmt(p.mo)}/mo × 10 years = ${fmt(tot)} total — ${fmt(tot-p.cost)} is interest!`:"Zero debt = every dollar builds your future."})()}</IB></Fd>}
+<div style={{display:"flex",justifyContent:"flex-end"}}><button onClick={go} disabled={!sel} style={{...bp,opacity:sel?1:.4}}>Lock Choice →</button></div></Ph>}
+
+// PHASE: Career
+function CareerPhase({onDone,pd,setPd}){const[sel,sSel]=useState(null);const cs=CS[pd.edPath]||CS.workforce;const ri=pd.interests||[];const sorted=[...cs].sort((a,b)=>(ri.includes(b.f)?1:0)-(ri.includes(a.f)?1:0));const go=()=>{const c=sorted.find(x=>x.t===sel);const adj=Math.round(c.s*(pd.salMul||1));setPd(d=>({...d,career:c.t,salary:adj,baseSal:adj}));onDone()};
+return<Ph title="Choose Your Career" sub={`Based on ${EP.find(p=>p.id===pd.edPath)?.t}. ⭐ = interest match.`}>
+<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(195px,1fr))",gap:9,marginBottom:14}}>{sorted.map(c=>{const s=sel===c.t,rel=ri.includes(c.f);return<button key={c.t} onClick={()=>sSel(c.t)} style={{padding:13,borderRadius:11,border:s?`3px solid ${C.g}`:rel?`2px solid #a5d6a7`:`2px solid ${C.br}`,background:s?C.gl:rel?"#f1f8e9":C.card,cursor:"pointer",textAlign:"left",fontFamily:F.b}}>{rel&&<div style={{fontSize:8,color:C.g,fontWeight:800}}>⭐ MATCH</div>}<div style={{fontWeight:700,fontSize:13,color:C.dk}}>{c.t}</div><div style={{fontSize:17,fontWeight:800,color:C.g,marginTop:3}}>{fmt(Math.round(c.s*(pd.salMul||1)))}<span style={{fontSize:10,color:C.tl}}>/yr</span></div></button>})}</div>
+<div style={{display:"flex",justifyContent:"flex-end"}}><button onClick={go} disabled={!sel} style={{...bp,opacity:sel?1:.4}}>Accept →</button></div></Ph>}
+
+// PHASE: Paystub (uses retPct from pd, defaults to 6%)
+function PaystubPhase({onDone,pd}){const s=ps(pd.salary,pd.retPct||.06);const[rv,sRv]=useState(0);const ds=[{l:"Federal Tax",v:s.ft,c:"#c62828",d:"Federal government & military"},{l:"KY State (5%)",v:s.st,c:"#e65100",d:"State roads, schools, parks"},{l:"Social Security (6.2%)",v:s.ss,c:"#f9a825",d:"Retirement after age 62"},{l:"Medicare (1.45%)",v:s.mc,c:"#0277bd",d:"Health insurance for 65+"},{l:"Health Insurance",v:s.hi,c:"#7b1fa2",d:"One ER visit = $10K+ without"},{l:`401(k) (${Math.round(s.rp*100)}%)`,v:s.r4,c:C.g,d:"Pre-tax retirement savings!"}];
+return<Ph title="Your Paycheck" sub={`What happens to ${fmt(pd.salary)}/year each month.`}>
+<div style={{background:C.dk,borderRadius:18,padding:20,color:"#f1f5f9",marginBottom:16}}>
+<div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:6,marginBottom:14}}><div><div style={{fontSize:10,color:C.m,textTransform:"uppercase",letterSpacing:1}}>Gross</div><div style={{fontSize:24,fontWeight:800,fontFamily:F.d}}>{fD(s.gross)}</div></div><div style={{textAlign:"right"}}><div style={{fontSize:10,color:C.m,textTransform:"uppercase",letterSpacing:1}}>Take-Home</div><div style={{fontSize:24,fontWeight:800,color:"#66bb6a",fontFamily:F.d}}>{fD(s.net)}</div></div></div>
+<div style={{background:"#1e293b",borderRadius:10,padding:12}}><div style={{fontSize:9,color:"#78909c",marginBottom:7,fontWeight:700,textTransform:"uppercase",letterSpacing:1}}>Deductions — click to learn</div>
+{ds.map((d,i)=><button key={i} onClick={()=>sRv(rv===i+1?0:i+1)} style={{display:"block",width:"100%",background:rv===i+1?"#334155":"transparent",border:"none",borderBottom:i<ds.length-1?"1px solid #334155":"none",padding:"8px 6px",cursor:"pointer",textAlign:"left",fontFamily:F.b,borderRadius:rv===i+1?6:0}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div style={{display:"flex",alignItems:"center",gap:6}}><div style={{width:7,height:7,borderRadius:"50%",background:d.c}}/><span style={{color:"#e2e8f0",fontSize:12}}>{d.l}</span></div><span style={{color:"#ef5350",fontWeight:700,fontSize:12}}>−{fD(d.v)}</span></div>{rv===i+1&&<div style={{color:"#90a4ae",fontSize:10,marginTop:2,marginLeft:14}}>💡 {d.d}</div>}</button>)}
+<div style={{display:"flex",justifyContent:"space-between",borderTop:"2px solid #455a64",paddingTop:7,marginTop:4}}><span style={{color:"#90a4ae",fontWeight:700,fontSize:12}}>Total</span><span style={{color:"#ef5350",fontWeight:800,fontSize:13}}>−{fD(s.td)}</span></div></div>
+<div style={{marginTop:10,display:"flex",height:16,borderRadius:4,overflow:"hidden"}}><div style={{width:`${(s.net/s.gross)*100}%`,background:"#66bb6a"}}/>{ds.map((d,i)=><div key={i} style={{width:`${(d.v/s.gross)*100}%`,background:d.c}}/>)}</div></div>
+<IB c="y" icon="🤯" title="Reality Check">Your {fmt(pd.salary)} salary = <strong>{fD(s.net)}/month</strong> take-home ({fD(s.net*12)}/year).</IB>
+<div style={{display:"flex",justifyContent:"flex-end"}}><button onClick={onDone} style={bp}>Build Budget →</button></div></Ph>}
+// PHASE: Budget — savings split into retirement/emergency/investments, live paystub below
+function BudgetPhase({onDone,pd,setPd}){
+const[retPct,sRP]=useState(pd.retPct||6);
+const s=ps(pd.salary,retPct/100);
+const tk=s.net,lp=pd.loanMo||0,carIns=pd.carInsMo||0,homeIns=pd.homeInsMo||0;
+const fixed=lp+carIns+homeIns+(pd.mortPay||0);
+const af=tk-fixed;
+const[b,sB]=useState({housing:pd.mortPay?0:Math.round(af*.28),food:400,transport:300,util:150,phone:80,fun:100,clothes:50,emergFund:Math.round(af*.05),investing:Math.round(af*.05)});
+const tot=Object.values(b).reduce((a,c)=>a+c,0);const rm=af-tot;
+const cats=[
+...(pd.mortPay?[]:[{k:"housing",l:"🏠 Rent",r:"~28%",c:"#1565c0"}]),
+{k:"food",l:"🍎 Food",r:"$300-500",c:"#f9a825"},
+{k:"transport",l:"🚗 Transport",r:"$200-400",c:"#6a1b9a"},
+{k:"util",l:"💡 Utilities",r:"$100-200",c:"#00838f"},
+{k:"phone",l:"📱 Phone",r:"$60-100",c:"#c2185b"},
+{k:"fun",l:"🎬 Fun",r:"$50-150",c:"#e65100"},
+{k:"clothes",l:"👕 Clothes",r:"$30-80",c:"#00897b"},
+{k:"emergFund",l:"🛡️ Emergency Fund",r:"3-6mo goal",c:"#0277bd"},
+{k:"investing",l:"📈 Investments",r:"5-15%",c:"#7b1fa2"}];
+const go=()=>{setPd(d=>({...d,budget:b,retPct:retPct/100,monthlySave:b.emergFund,monthlyInv:b.investing,ret401k:s.r4}));onDone()};
+
+return<Ph title="Monthly Budget" sub={`${fD(af)} available after fixed costs.`}>
+{(fixed>0)&&<div style={{background:"#f8f7f4",borderRadius:12,padding:14,marginBottom:14,border:`1px solid ${C.br}`}}>
+<div style={{fontSize:12,fontWeight:700,color:C.dk,marginBottom:8}}>📌 Fixed Monthly Costs (auto-deducted)</div>
+<div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+{lp>0&&<Tg c={C.r} l={`Student Loan: ${fmt(lp)}`}/>}
+{(pd.mortPay||0)>0&&<Tg c="#1565c0" l={`Mortgage: ${fmt(pd.mortPay)}`}/>}
+{carIns>0&&<Tg c="#6a1b9a" l={`Car Ins: ${fmt(carIns)}`}/>}
+{homeIns>0&&<Tg c="#00838f" l={`Home Ins: ${fmt(homeIns)}`}/>}
+</div>
+<div style={{fontSize:11,color:C.tl,marginTop:4}}>Total fixed: {fD(fixed)}/mo → {fD(af)} remaining</div>
+</div>}
+
+<div style={{background:C.card,borderRadius:14,padding:16,marginBottom:14,border:`2px solid ${C.g}`}}>
+<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+<div style={{fontSize:13,fontWeight:700,color:C.dk}}>🏦 Retirement (401k) — Pre-Tax</div>
+<div style={{fontSize:18,fontWeight:800,color:C.g}}>{retPct}%</div></div>
+<input type="range" min={0} max={20} step={1} value={retPct} onChange={e=>sRP(+e.target.value)} style={{width:"100%",accentColor:C.g}}/>
+<div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:C.tl,marginTop:2}}>
+<span>{fD(s.r4)}/mo to retirement</span>
+<span>Take-home: {fD(s.net)}/mo</span></div>
+<div style={{fontSize:10,color:C.m,marginTop:2}}>💡 Pre-tax = reduces taxable income. Higher % = more retirement but less take-home.</div>
+</div>
+
+<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(190px,1fr))",gap:9,marginBottom:14}}>{cats.map(({k,l,r,c})=><div key={k} style={{background:"#f8f7f4",borderRadius:11,padding:11,border:`1px solid ${C.br}`}}><div style={{fontSize:12,fontWeight:700,color:C.dk}}>{l}</div><div style={{fontSize:10,color:C.m,marginBottom:5}}>Rec: {r}</div><div style={{display:"flex",alignItems:"center",gap:3}}><span style={{color:C.tl,fontWeight:700,fontSize:12}}>$</span><input type="number" value={b[k]} onChange={e=>sB(p=>({...p,[k]:Math.max(0,parseInt(e.target.value)||0)}))} style={{width:"100%",padding:"6px 8px",border:`2px solid ${C.br}`,borderRadius:7,fontSize:14,fontWeight:700,fontFamily:F.b,outline:"none",boxSizing:"border-box"}} onFocus={e=>e.target.style.borderColor=c} onBlur={e=>e.target.style.borderColor=C.br}/></div></div>)}</div>
+
+<div style={{background:rm>=0?C.gl:C.rl,borderRadius:12,padding:14,border:`2px solid ${rm>=0?"#66bb6a":"#ef5350"}`,marginBottom:14,textAlign:"center"}}><div style={{fontSize:11,color:C.tl}}>Remaining</div><div style={{fontSize:28,fontWeight:800,color:rm>=0?C.g:C.r,fontFamily:F.d}}>{fD(rm)}</div>{rm<0&&<div style={{color:C.r,fontSize:11}}>⚠️ Over budget!</div>}</div>
+
+<div style={{background:"#f8f7f4",borderRadius:14,padding:14,marginBottom:14,border:`1px solid ${C.br}`}}>
+<div style={{fontSize:12,fontWeight:700,color:C.dk,marginBottom:8}}>📊 Savings Breakdown</div>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8}}>
+<div style={{textAlign:"center",background:C.gl,borderRadius:10,padding:10}}><div style={{fontSize:9,color:"#1b5e20",fontWeight:700}}>🏦 RETIREMENT</div><div style={{fontSize:16,fontWeight:800,color:C.g}}>{fD(s.r4)}</div><div style={{fontSize:9,color:C.tl}}>Pre-tax {retPct}%</div></div>
+<div style={{textAlign:"center",background:C.bl,borderRadius:10,padding:10}}><div style={{fontSize:9,color:"#01579b",fontWeight:700}}>🛡️ EMERGENCY</div><div style={{fontSize:16,fontWeight:800,color:C.b}}>{fD(b.emergFund)}</div><div style={{fontSize:9,color:C.tl}}>Post-tax</div></div>
+<div style={{textAlign:"center",background:"#f3e5f5",borderRadius:10,padding:10}}><div style={{fontSize:9,color:"#4a148c",fontWeight:700}}>📈 INVESTING</div><div style={{fontSize:16,fontWeight:800,color:"#7b1fa2"}}>{fD(b.investing)}</div><div style={{fontSize:9,color:C.tl}}>Post-tax</div></div>
+</div>
+<div style={{fontSize:11,color:C.tl,marginTop:6,textAlign:"center"}}>Total monthly savings: <strong style={{color:C.g}}>{fD(s.r4+b.emergFund+b.investing)}</strong></div>
+</div>
+
+<div style={{background:C.dk,borderRadius:14,padding:14,color:"#f1f5f9",marginBottom:14}}>
+<div style={{fontSize:11,color:"#78909c",fontWeight:700,textTransform:"uppercase",letterSpacing:1,marginBottom:8}}>💰 Live Paystub Preview</div>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,fontSize:11}}>
+<div style={{color:"#90a4ae"}}>Gross Monthly</div><div style={{textAlign:"right",fontWeight:700}}>{fD(s.gross)}</div>
+<div style={{color:"#90a4ae"}}>401(k) ({retPct}%)</div><div style={{textAlign:"right",color:"#66bb6a",fontWeight:700}}>−{fD(s.r4)}</div>
+<div style={{color:"#90a4ae"}}>Federal Tax</div><div style={{textAlign:"right",color:"#ef5350"}}>−{fD(s.ft)}</div>
+<div style={{color:"#90a4ae"}}>State Tax</div><div style={{textAlign:"right",color:"#ef5350"}}>−{fD(s.st)}</div>
+<div style={{color:"#90a4ae"}}>SS + Medicare</div><div style={{textAlign:"right",color:"#ef5350"}}>−{fD(s.ss+s.mc)}</div>
+<div style={{color:"#90a4ae"}}>Health Insurance</div><div style={{textAlign:"right",color:"#ef5350"}}>−{fD(s.hi)}</div>
+<div style={{borderTop:"1px solid #455a64",paddingTop:4,color:"#66bb6a",fontWeight:800}}>Take-Home</div><div style={{borderTop:"1px solid #455a64",paddingTop:4,textAlign:"right",color:"#66bb6a",fontWeight:800,fontSize:14}}>{fD(s.net)}</div>
+</div></div>
+
+<div style={{display:"flex",justifyContent:"flex-end"}}><button onClick={go} disabled={rm<0} style={{...bp,opacity:rm<0?.4:1}}>Lock Budget →</button></div></Ph>}
+
+// PHASE: Life Choices (house? marriage?)
+function LifeChoicesPhase({onDone,pd,setPd}){const[wH,sWH]=useState(null);const[wM,sWM]=useState(null);const[step,sS]=useState(0);const go=()=>{setPd(d=>({...d,wantsHouse:wH==="y",wantsMarriage:wM==="y",dualIncome:wM==="y"?Math.round(d.salary*.75):0}));onDone()};
+return<Ph title="Life Decisions" sub="These reshape your finances significantly.">
+{step===0&&<Fd><div style={{background:C.card,borderRadius:14,padding:22,border:`1px solid ${C.br}`,textAlign:"center",marginBottom:18}}><div style={{fontSize:44,marginBottom:10}}>🏠</div><h3 style={{fontFamily:F.d,color:C.dk,margin:"0 0 6px",fontSize:18}}>Buy a house?</h3><p style={{color:C.tl,fontSize:13,marginBottom:16}}>Builds equity but adds mortgage, taxes, insurance, maintenance.</p><div style={{display:"flex",gap:10,justifyContent:"center"}}><button onClick={()=>{sWH("y");sS(1)}} style={{...bp,padding:"12px 28px"}}>🏡 Yes</button><button onClick={()=>{sWH("n");sS(1)}} style={{...bs,padding:"12px 28px"}}>🏢 Rent</button></div></div></Fd>}
+{step===1&&<Fd><div style={{background:C.card,borderRadius:14,padding:22,border:`1px solid ${C.br}`,textAlign:"center",marginBottom:18}}><div style={{fontSize:44,marginBottom:10}}>💍</div><h3 style={{fontFamily:F.d,color:C.dk,margin:"0 0 6px",fontSize:18}}>Get married?</h3><p style={{color:C.tl,fontSize:13,marginBottom:16}}>Dual income helps, but adds wedding costs and shared obligations.</p><div style={{display:"flex",gap:10,justifyContent:"center"}}><button onClick={()=>{sWM("y");sS(2)}} style={{...bp,padding:"12px 28px"}}>💍 Yes</button><button onClick={()=>{sWM("n");sS(2)}} style={{...bs,padding:"12px 28px"}}>🚶 Single</button></div></div></Fd>}
+{step===2&&<Fd><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}><div style={{background:C.card,borderRadius:12,padding:14,border:`1px solid ${C.br}`,textAlign:"center"}}><div style={{fontSize:28}}>🏠</div><div style={{fontWeight:700,color:C.dk,marginTop:3,fontSize:13}}>{wH==="y"?"Buying ✅":"Renting"}</div></div><div style={{background:C.card,borderRadius:12,padding:14,border:`1px solid ${C.br}`,textAlign:"center"}}><div style={{fontSize:28}}>💍</div><div style={{fontWeight:700,color:C.dk,marginTop:3,fontSize:13}}>{wM==="y"?"Married ✅":"Single"}</div></div></div>{wM==="y"&&<IB c="g" icon="💰" title="Dual Income">Partner est. 75% of salary: +{fmt(Math.round(pd.salary*.75))}/yr.</IB>}<div style={{display:"flex",justifyContent:"flex-end"}}><button onClick={go} style={bp}>Continue →</button></div></Fd>}</Ph>}
+// PHASE: Housing — includes home insurance + car insurance with deductible
+function HousingPhase({onDone,pd,setPd}){const[hood,sH]=useState(null);const[size,sSz]=useState(null);const[dp,sDp]=useState(10);const[rate,sRt]=useState(pd.teacherRate||6.8);const[term,sTm]=useState(30);const[step,sS]=useState(0);
+const[homeIns,sHI]=useState("y");const[carIns,sCI]=useState("full");const[carDed,sCD]=useState(1000);
+const hd=HOODS.find(n=>n.n===hood);const price=hd?hd[size]||0:0;const da=price*(dp/100);const loan=price-da;const mr=rate/100/12;const np=term*12;const mort=loan>0?loan*(mr*Math.pow(1+mr,np))/(Math.pow(1+mr,np)-1):0;const ptx=hd?(price*hd.tx)/12:0;const hoa=hd?hd.hoa:0;const hiMo=homeIns==="y"?Math.round(price*.004/12):0;const pmi=dp<20?Math.round(loan*.007/12):0;
+const baseCar=140;const dedAdj=carDed<=500?1.35:carDed<=1000?1.0:carDed<=1500?.85:carDed<=2000?.72:.62;
+const carMo=carIns==="full"?Math.round(baseCar*dedAdj):carIns==="liability"?55:0;
+const totMo=mort+ptx+hoa+hiMo+pmi;
+const go=()=>{setPd(d=>({...d,neighborhood:hood,homeSize:size,homePrice:price,downPay:da,mortPay:Math.round(totMo),hasHomeIns:homeIns==="y",homeInsMo:hiMo,carInsType:carIns,carDeductible:carDed,carInsMo:carMo,intRate:rate}));onDone()};
+
+return<Ph title="🏠 Home Buying" sub="Find a home near Erlanger, KY.">
+{step===0&&<Fd><p style={{color:C.tl,fontSize:13,marginBottom:10}}>Choose neighborhood (within 10 mi of Erlanger):</p>
+<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:9,marginBottom:12}}>{HOODS.map(n=>{const s=hood===n.n;return<button key={n.n} onClick={()=>sH(n.n)} style={{padding:11,borderRadius:11,border:s?`3px solid ${C.g}`:`2px solid ${C.br}`,background:s?C.gl:C.card,cursor:"pointer",textAlign:"left",fontFamily:F.b}}><div style={{display:"flex",justifyContent:"space-between"}}><strong style={{fontSize:12,color:C.dk}}>{n.n}</strong><Tg c={C.b} l={n.dist}/></div><div style={{fontSize:10,color:C.tl,marginTop:1}}>{n.d}</div><div style={{fontSize:9,color:C.m,marginTop:1}}>Tax: {(n.tx*100).toFixed(2)}% | HOA: {n.hoa?`$${n.hoa}`:"-"}</div><div style={{fontSize:10,color:C.g,fontWeight:700,marginTop:1}}>{fmt(n.sm)} – {fmt(n.lg)}</div></button>})}</div>
+{hood&&<div style={{display:"flex",justifyContent:"flex-end"}}><button onClick={()=>sS(1)} style={bp}>Size →</button></div>}</Fd>}
+
+{step===1&&<Fd><h3 style={{fontFamily:F.b,color:C.dk,margin:"0 0 10px",fontSize:15}}>Home size in {hood}:</h3>
+<div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16}}>{[{k:"sm",l:"🏡 Starter",d:"2-3 bed"},{k:"md",l:"🏠 Mid-Size",d:"3-4 bed"},{k:"lg",l:"🏰 Large",d:"4-5 bed"}].map(o=>{const s=size===o.k;return<button key={o.k} onClick={()=>sSz(o.k)} style={{padding:16,borderRadius:12,border:s?`3px solid ${C.g}`:`2px solid ${C.br}`,background:s?C.gl:C.card,cursor:"pointer",textAlign:"center",fontFamily:F.b}}><div style={{fontSize:12,fontWeight:700,color:C.dk}}>{o.l}</div><div style={{fontSize:10,color:C.tl}}>{o.d}</div><div style={{fontSize:18,fontWeight:800,color:C.g,marginTop:6}}>{fmt(hd[o.k])}</div></button>})}</div>
+{size&&<div style={{display:"flex",justifyContent:"flex-end"}}><button onClick={()=>sS(2)} style={bp}>Mortgage & Insurance →</button></div>}</Fd>}
+
+{step===2&&<Fd>
+<div style={{background:C.dk,borderRadius:18,padding:18,color:"#f1f5f9",marginBottom:14}}>
+<h3 style={{fontFamily:F.d,margin:"0 0 12px",fontSize:16}}>🏦 Mortgage Calculator</h3>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10,marginBottom:12}}>
+<div><label style={{fontSize:9,color:"#90a4ae"}}>Down Payment</label><input type="range" min={3} max={30} value={dp} onChange={e=>sDp(+e.target.value)} style={{width:"100%",accentColor:C.g}}/><div style={{fontSize:13,fontWeight:800,color:"#66bb6a"}}>{dp}% ({fmt(da)})</div></div>
+<div><label style={{fontSize:9,color:"#90a4ae"}}>Interest Rate</label><input type="range" min={3} max={10} step={.1} value={rate} onChange={e=>sRt(+e.target.value)} style={{width:"100%",accentColor:"#fbbf24"}}/><div style={{fontSize:13,fontWeight:800,color:"#fbbf24"}}>{rate.toFixed(1)}%</div></div>
+<div><label style={{fontSize:9,color:"#90a4ae"}}>Term</label><div style={{display:"flex",gap:3,marginTop:3}}>{[15,30].map(t=><button key={t} onClick={()=>sTm(t)} style={{flex:1,padding:5,borderRadius:6,border:"none",background:term===t?C.g:"#1e293b",color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:F.b,fontSize:11}}>{t}yr</button>)}</div></div></div>
+<div style={{background:"#1e293b",borderRadius:10,padding:12}}>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+<div><div style={{fontSize:8,color:"#78909c"}}>P&I</div><div style={{fontSize:15,fontWeight:800}}>{fD(mort)}</div></div>
+<div><div style={{fontSize:8,color:"#78909c"}}>Property Tax</div><div style={{fontSize:15,fontWeight:800}}>{fD(ptx)}</div></div>
+<div><div style={{fontSize:8,color:"#78909c"}}>HOA</div><div style={{fontSize:15,fontWeight:800}}>{hoa?fD(hoa):"—"}</div></div>
+<div><div style={{fontSize:8,color:"#78909c"}}>PMI{dp<20?" ⚠️":""}</div><div style={{fontSize:15,fontWeight:800,color:pmi?"#ef5350":"#66bb6a"}}>{pmi?fD(pmi):"✓"}</div></div></div>
+{dp<20&&<div style={{fontSize:9,color:"#fbbf24",marginTop:4}}>PMI required until 20% equity.</div>}</div></div>
+
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:14}}>
+<div style={{background:C.card,borderRadius:14,padding:16,border:`1px solid ${C.br}`}}>
+<div style={{fontSize:32,textAlign:"center",marginBottom:4}}>🏠</div>
+<h4 style={{fontFamily:F.b,color:C.dk,margin:"0 0 4px",fontSize:13,textAlign:"center"}}>Homeowner's Insurance</h4>
+<p style={{fontSize:10,color:C.tl,marginBottom:10,textAlign:"center"}}>Covers fire, theft, storms, liability. Est. {fD(Math.round(price*.004/12))}/mo.</p>
+<div style={{display:"flex",gap:6,justifyContent:"center"}}><button onClick={()=>sHI("y")} style={{...(homeIns==="y"?bp:bs),padding:"6px 14px",fontSize:11}}>Yes {homeIns==="y"?"✓":""}</button><button onClick={()=>sHI("n")} style={{...(homeIns==="n"?{...bs,borderColor:C.r,color:C.r}:bs),padding:"6px 14px",fontSize:11}}>Skip</button></div>
+{homeIns==="n"&&<div style={{fontSize:9,color:C.r,marginTop:6,textAlign:"center"}}>⚠️ One storm could cost $10,000+</div>}
+</div>
+
+<div style={{background:C.card,borderRadius:14,padding:16,border:`1px solid ${C.br}`}}>
+<div style={{fontSize:32,textAlign:"center",marginBottom:4}}>🚗</div>
+<h4 style={{fontFamily:F.b,color:C.dk,margin:"0 0 4px",fontSize:13,textAlign:"center"}}>Auto Insurance</h4>
+<p style={{fontSize:10,color:C.tl,marginBottom:8,textAlign:"center"}}>KY requires liability. Full coverage protects your car too.</p>
+<div style={{display:"flex",gap:4,justifyContent:"center",flexWrap:"wrap",marginBottom:8}}>
+{[{v:"full",l:"Full Coverage"},{v:"liability",l:"Liability Only"},{v:"none",l:"None"}].map(o=><button key={o.v} onClick={()=>sCI(o.v)} style={{...(carIns===o.v?bp:bs),padding:"5px 10px",fontSize:10}}>{o.l}</button>)}
+</div>
+{carIns==="full"&&<div>
+<div style={{fontSize:10,color:C.dk,fontWeight:600,marginBottom:4}}>Deductible: {fmt(carDed)}</div>
+<input type="range" min={500} max={3000} step={500} value={carDed} onChange={e=>sCD(+e.target.value)} style={{width:"100%",accentColor:C.b}}/>
+<div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:C.tl}}><span>$500 (higher rate)</span><span>$3,000 (lower rate)</span></div>
+<div style={{fontSize:10,color:C.b,fontWeight:700,marginTop:4,textAlign:"center"}}>Monthly: {fD(carMo)}</div>
+<div style={{fontSize:9,color:C.tl,marginTop:2,textAlign:"center"}}>Higher deductible = lower monthly but more out-of-pocket if accident</div>
+</div>}
+{carIns==="liability"&&<div style={{fontSize:10,color:C.tl,textAlign:"center"}}>Monthly: {fD(55)} — Covers others only, not your car.</div>}
+{carIns==="none"&&<div style={{fontSize:9,color:C.r,textAlign:"center"}}>⚠️ Illegal in KY without at least liability!</div>}
+</div></div>
+
+<div style={{background:C.gl,borderRadius:12,padding:14,border:"2px solid #66bb6a",textAlign:"center",marginBottom:12}}>
+<div style={{fontSize:11,color:C.tl}}>Total Monthly Housing + Insurance</div>
+<div style={{fontSize:26,fontWeight:800,color:C.g,fontFamily:F.d}}>{fD(totMo+carMo)}</div>
+<div style={{display:"flex",gap:12,justifyContent:"center",fontSize:10,color:C.tl,marginTop:4}}>
+<span>Mortgage+Tax+HOA: {fD(totMo-hiMo)}</span>
+{hiMo>0&&<span>Home Ins: {fD(hiMo)}</span>}
+{carMo>0&&<span>Car Ins: {fD(carMo)}</span>}
+</div>
+<div style={{fontSize:10,color:C.tl,marginTop:4}}>{Math.round(((totMo+carMo)/ps(pd.salary).net)*100)}% of take-home{((totMo+carMo)/ps(pd.salary).net)>.35?<span style={{color:C.r,fontWeight:700}}> ⚠️ Above 35%!</span>:""}</div>
+</div>
+<div style={{display:"flex",justifyContent:"flex-end"}}><button onClick={go} style={bp}>Finalize →</button></div>
+</Fd>}</Ph>}
+// PHASE: Investing
+function InvestingPhase({onDone,pd,setPd}){const[al,sAl]=useState({sp500:40,bonds:20,growth:15,reit:10,intl:10,hysa:5});const[sim,sSim]=useState(null);const mm=pd.teacherMktMod||0;const tot=Object.values(al).reduce((a,b)=>a+b,0);const mo=pd.monthlyInv||200;
+const doSim=()=>{const yrs=[];let bal=0;for(let y=1;y<=5;y++){let yr=0;for(const o of IO){const p=(al[o.id]||0)/100;yr+=p*(o.ar+(mm/100)+(Math.random()-.5)*o.vol)}bal=(bal+mo*12)*(1+yr);yrs.push({y,bal:Math.max(0,bal),ret:yr})}sSim(yrs)};
+const go=()=>{const ar=IO.reduce((s,o)=>s+((al[o.id]||0)/100)*o.ar,0);setPd(d=>({...d,invAlloc:al,avgRet:ar,simResult:sim}));onDone()};
+return<Ph title="📈 Investment Strategy" sub={`Allocate your ${fmt(mo)}/mo investment. Total must = 100%.`}>
+<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:9,marginBottom:10}}>{IO.map(o=><div key={o.id} style={{background:C.card,borderRadius:10,padding:11,border:`1px solid ${C.br}`}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div><span style={{fontSize:16}}>{o.i}</span> <strong style={{fontSize:11}}>{o.n}</strong></div><Tg c={o.risk==="Very Low"?C.g:o.risk==="Low"?C.b:o.risk==="Medium"?"#f9a825":C.r} l={o.risk}/></div><div style={{fontSize:9,color:C.tl,margin:"2px 0"}}>{o.d} | Avg: {(o.ar*100).toFixed(1)}%</div><div style={{display:"flex",alignItems:"center",gap:5}}><input type="range" min={0} max={100} step={5} value={al[o.id]||0} onChange={e=>sAl(p=>({...p,[o.id]:+e.target.value}))} style={{flex:1,accentColor:C.g}}/><strong style={{width:36,textAlign:"right",fontSize:13}}>{al[o.id]}%</strong></div></div>)}</div>
+<div style={{background:tot===100?C.gl:C.wl,borderRadius:10,padding:10,textAlign:"center",marginBottom:10,border:`2px solid ${tot===100?"#66bb6a":"#ff9800"}`}}><strong style={{fontSize:14,color:tot===100?C.g:C.w}}>{tot}%{tot===100?" ✅":tot>100?" ⚠️ Over!":""}</strong></div>
+{tot===100&&<><button onClick={doSim} style={{...bs,marginBottom:10,fontSize:11}}>🎲 Simulate 5-Year Market</button>
+{sim&&<Fd><div style={{background:C.dk,borderRadius:14,padding:14,color:"#f1f5f9",marginBottom:10}}><h4 style={{margin:"0 0 8px",fontFamily:F.b,fontSize:12}}>5-Year Simulation</h4><div style={{display:"flex",gap:6,alignItems:"flex-end",height:80,marginBottom:6}}>{sim.map((y,i)=><div key={i} style={{flex:1,textAlign:"center"}}><div style={{height:`${Math.min(70,(y.bal/(sim[4].bal||1))*70)}px`,background:y.ret>=0?"#66bb6a":"#ef5350",borderRadius:"3px 3px 0 0"}}/><div style={{fontSize:8,color:"#90a4ae",marginTop:1}}>Y{y.y}</div><div style={{fontSize:8,color:"#66bb6a",fontWeight:700}}>{fmt(Math.round(y.bal))}</div></div>)}</div><div style={{fontSize:9,color:"#90a4ae"}}>Put in: {fmt(mo*60)} → Got: {fmt(Math.round(sim[4]?.bal||0))}</div></div>
+<IB c="g" icon="🌱" title="Key Lesson"><strong>Time in the market beats timing the market.</strong> Stay invested through ups and downs.</IB></Fd>}</>}
+<div style={{display:"flex",justifyContent:"flex-end"}}><button onClick={go} disabled={tot!==100} style={{...bp,opacity:tot===100?1:.4}}>Lock Strategy →</button></div></Ph>}
+
+// PHASE: Life Events
+function LifeEventsPhase({onDone,pd,setPd}){const[evts,sE]=useState([]);const[cur,sC]=useState(null);const[idx,sI]=useState(0);const[sav,sS]=useState((pd.monthlySave||200)*6);const[show,sSh]=useState(false);
+useEffect(()=>{const pool=[...(pd.teacherEvents||[])];const n=[...LEP.neg],p=[...LEP.pos],u=[...LEP.neu];for(let i=0;i<2;i++)pool.push(n.splice(Math.floor(Math.random()*n.length),1)[0]);pool.push(p[Math.floor(Math.random()*p.length)]);pool.push(u[Math.floor(Math.random()*u.length)]);if(!pd.hasHomeIns&&pd.wantsHouse)pool.push({t:"Storm damage — uninsured!",a:-6000});if(pd.carInsType==="none")pool.push({t:"Fender bender — no insurance!",a:-4000});for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}sE(pool);sC(pool[0])},[]);
+const reveal=()=>{sSh(true);sS(s=>s+(cur.a||0))};const next=()=>{const n=idx+1;if(n<evts.length){sI(n);sC(evts[n]);sSh(false)}else{setPd(d=>({...d,emergFund:sav}));onDone()}};
+if(!cur)return null;
+return<Ph title="Life Happens!" sub="Test your resilience."><div style={{textAlign:"center",marginBottom:12}}><span style={{fontSize:12,color:C.tl}}>Emergency Fund: </span><strong style={{color:sav>=0?C.g:C.r,fontSize:16}}>{fmt(Math.max(0,sav))}</strong><span style={{fontSize:10,color:C.m,marginLeft:6}}>Event {idx+1}/{evts.length}</span></div>
+<div style={{background:`linear-gradient(135deg,${C.dk},${C.dk2})`,borderRadius:18,padding:28,textAlign:"center",color:"#f1f5f9",marginBottom:12,minHeight:140,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>{!show?<><div style={{fontSize:44}}>🎲</div><div style={{fontSize:12,color:"#90a4ae",margin:"8px 0"}}>Something happened...</div><button onClick={reveal} style={{...bp,background:"linear-gradient(135deg,#fbbf24,#f59e0b)",color:C.dk}}>Reveal</button></>:<Fd><div style={{fontSize:38}}>{(cur.a||0)>0?"🎉":cur.a<-3000?"😰":"😅"}</div><div style={{fontSize:16,fontWeight:700,margin:"5px 0"}}>{cur.t}</div><div style={{fontSize:22,fontWeight:800,color:(cur.a||0)>0?"#66bb6a":"#ef5350",fontFamily:F.d}}>{cur.a>0?"+":""}{fmt(cur.a)}</div>{sav<0&&<div style={{color:"#fbbf24",fontSize:10,marginTop:6,background:"#3e2723",padding:"4px 10px",borderRadius:6}}>⚠️ Credit card at 24% APR!</div>}<button onClick={next} style={{...bp,marginTop:10}}>{idx+1<evts.length?"Next →":"Results →"}</button></Fd>}</div></Ph>}
+
+// PHASE: Retirement — uses retPct from budget
+function RetirementPhase({onDone,pd}){const sal=pd.salary||50000;const rp=pd.retPct||.06;const s=ps(sal,rp);const mo401=s.r4;const moInv=pd.monthlyInv||200;const ar=pd.avgRet||.08;const ageNow=pd.age||42;const yrsLeft=Math.max(10,65-ageNow);const yrs=yrsLeft;const already401=pd.totalRetirement||0;const alreadyInv=pd.totalInvested||0;const r401=already401*Math.pow(1.07,yrs)+mo401*((Math.pow(1+.07/12,yrs*12)-1)/(.07/12));const rInv=alreadyInv*Math.pow(1+ar,yrs)+moInv*((Math.pow(1+ar/12,yrs*12)-1)/(ar/12));const boost=pd.teacherAcctBoost||0;const ssMo=Math.min(3600,Math.round(sal*.4/12));const nest=r401+rInv+boost;const safe=nest*.04/12;const retMo=safe+ssMo;const ok=retMo>2500;
+return<Ph title="🏖️ Retirement" sub={`${yrs} years until retirement at 65. Currently age ${ageNow}.`}>
+<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(175px,1fr))",gap:10,marginBottom:16}}>
+<SC icon="🏦" label="401(k)" value={fmt(Math.round(r401))} sub={`${fD(mo401)}/mo + ${fmt(Math.round(already401))} banked`} vc={C.g}/>
+<SC icon="📈" label="Investments" value={fmt(Math.round(rInv))} sub={`${fmt(moInv)}/mo + ${fmt(Math.round(alreadyInv))} banked`} vc={C.b}/>
+{boost>0&&<SC icon="🎁" label="Teacher Bonus" value={fmt(boost)} sub="Added to accounts" vc="#7b1fa2"/>}
+<SC icon="🪺" label="Nest Egg" value={fmt(Math.round(nest))} sub="Total savings" vc={C.g}/>
+<SC icon="🏛️" label="Social Security" value={fD(ssMo)+"/mo"} sub="Est. benefit"/>
+<SC icon="💵" label="Retirement Income" value={fD(retMo)+"/mo"} sub="4% rule + SS" vc={ok?C.g:C.r}/></div>
+<div style={{background:C.dk,borderRadius:18,padding:18,color:"#f1f5f9",marginBottom:14}}>
+<h4 style={{margin:"0 0 10px",fontFamily:F.d,fontSize:15}}>Monthly Income Breakdown</h4>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
+<div style={{background:"#1e293b",borderRadius:10,padding:12,textAlign:"center"}}><div style={{fontSize:9,color:"#90a4ae"}}>401(k)</div><div style={{fontSize:16,fontWeight:800,color:"#66bb6a"}}>{fD(r401*.04/12)}</div></div>
+<div style={{background:"#1e293b",borderRadius:10,padding:12,textAlign:"center"}}><div style={{fontSize:9,color:"#90a4ae"}}>Investments</div><div style={{fontSize:16,fontWeight:800,color:"#42a5f5"}}>{fD(rInv*.04/12)}</div></div>
+<div style={{background:"#1e293b",borderRadius:10,padding:12,textAlign:"center"}}><div style={{fontSize:9,color:"#90a4ae"}}>Social Security</div><div style={{fontSize:16,fontWeight:800,color:"#fbbf24"}}>{fD(ssMo)}</div></div></div>
+<div style={{marginTop:10,textAlign:"center"}}><div style={{fontSize:10,color:"#90a4ae"}}>Total Monthly</div><div style={{fontSize:26,fontWeight:800,color:ok?"#66bb6a":"#ef5350",fontFamily:F.d}}>{fD(retMo)}</div></div></div>
+<IB c={ok?"g":"r"} icon={ok?"🎉":"⚠️"} title={ok?"Looking Good!":"Retirement Gap"}>{ok?`${fD(retMo)}/month = comfortable retirement. Smart choices paid off!`:`${fD(retMo)}/month may be tight. Every extra $100/mo now adds ~${fmt(Math.round(100*((Math.pow(1+.08/12,yrs*12)-1)/(.08/12))))} to nest egg.`}</IB>
+<div style={{background:C.gl,borderRadius:12,padding:16,border:"2px solid #66bb6a",marginBottom:14}}><strong style={{color:"#1b5e20",fontSize:14}}>📋 Discussion Questions</strong><div style={{fontSize:12,color:"#2e7d32",lineHeight:1.7,marginTop:4}}>1. What surprised you about your paycheck?<br/>2. Would you change your education choice?<br/>3. How would a {fmt(5000)} emergency affect your plan?<br/>4. Why does investing early matter so much?<br/>5. How did housing and insurance affect your monthly budget?<br/>6. How did your retirement savings % impact your nest egg?<br/>7. What's the trade-off between higher deductible and lower insurance premium?</div></div>
+<div style={{display:"flex",justifyContent:"flex-end"}}><button onClick={onDone} style={bp}>Final Summary →</button></div></Ph>}
+// PHASE: Summary
+function SummaryPhase({pd,onRestart,onTeacher}){const ep=EP.find(p=>p.id===pd.edPath);const s=ps(pd.salary,pd.retPct);const cs=pd.creditScore||700;const cc=cs>=740?C.g:cs>=670?"#f9a825":C.r;
+return<Ph title={`${pd.name}'s Financial Snapshot`} sub="Complete picture. Discuss with your class!">
+<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(170px,1fr))",gap:9,marginBottom:16}}>
+<SC icon="🎓" label="Education" value={ep?.t||"N/A"} sub={`Debt: ${fmt(pd.debt||0)}`}/>
+<SC icon="💼" label="Career" value={pd.career||"N/A"} sub={`${fmt(pd.salary||0)}/yr`}/>
+<SC icon="💵" label="Take-Home" value={fD(s.net)} sub="Per month"/>
+<SC icon="🏦" label="401(k)" value={`${Math.round((pd.retPct||.06)*100)}%`} sub={`${fD(s.r4)}/mo pre-tax`} vc={C.g}/>
+{pd.wantsHouse&&<SC icon="🏠" label="Home" value={fmt(pd.homePrice||0)} sub={`${pd.neighborhood||""} ${fD(pd.mortPay||0)}/mo`}/>}
+<SC icon="🚗" label="Car Insurance" value={pd.carInsType==="full"?`Full (${fmt(pd.carDeductible||1000)} ded)`:pd.carInsType==="liability"?"Liability":"None!"} sub={`${fD(pd.carInsMo||0)}/mo`}/>
+<SC icon="📈" label="Investing" value={`${fmt(pd.monthlyInv||0)}/mo`}/>
+<SC icon="🛡️" label="Emergency" value={fmt(Math.max(0,pd.emergFund||0))} sub={(pd.emergFund||0)<0?"⚠️ Debt":"Saved"}/>
+<SC icon="💳" label="Credit" value={cs} sub={cs>=740?"Excellent":cs>=670?"Good":"Needs Work"} vc={cc}/>
+{pd.wantsMarriage&&<SC icon="💍" label="Married" value="Yes" sub={`+${fmt(pd.dualIncome||0)}/yr`}/>}
+</div>
+<div style={{display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}><button onClick={onRestart} style={bp}>🔄 Play Again</button><button onClick={onTeacher} style={bs}>🍎 Teacher</button></div></Ph>}
+
+// TEACHER LOGIN
+function TeacherLogin({onAuth,onBack}){const[user,sU]=useState("");const[pass,sP]=useState("");const[err,sE]=useState("");
+const tryAuth=()=>{if(user.trim()===TEACHER_USER&&pass===TEACHER_PASS){onAuth()}else{sE("Invalid username or password.")}};
+return<div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"linear-gradient(160deg,#0a0e27,#1a2744 40%,#0a3d2e)",fontFamily:F.b,padding:24}}>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800;900&family=Fraunces:wght@700;800;900&display=swap" rel="stylesheet"/>
+<div style={{fontSize:48,marginBottom:10}}>🍎</div>
+<h2 style={{fontFamily:F.d,fontSize:28,fontWeight:800,color:"#e8f5e9",margin:"0 0 6px"}}>Teacher Login</h2>
+<p style={{color:"#80cbc4",fontSize:13,marginBottom:22}}>Enter your credentials to access the dashboard.</p>
+<div style={{background:"rgba(255,255,255,.06)",borderRadius:14,padding:24,width:"100%",maxWidth:340}}>
+<label style={{display:"block",color:"#a5d6a7",fontSize:12,fontWeight:600,marginBottom:4}}>Username</label>
+<input value={user} onChange={e=>sU(e.target.value)} placeholder="Username" style={{width:"100%",padding:"11px 14px",fontSize:15,border:"2px solid rgba(255,255,255,.15)",borderRadius:8,outline:"none",fontFamily:F.b,boxSizing:"border-box",background:"rgba(255,255,255,.08)",color:"#fff",marginBottom:12}} onFocus={e=>e.target.style.borderColor=C.g} onBlur={e=>e.target.style.borderColor="rgba(255,255,255,.15)"}/>
+<label style={{display:"block",color:"#a5d6a7",fontSize:12,fontWeight:600,marginBottom:4}}>Password</label>
+<input type="password" value={pass} onChange={e=>sP(e.target.value)} placeholder="Password" onKeyDown={e=>e.key==="Enter"&&tryAuth()} style={{width:"100%",padding:"11px 14px",fontSize:15,border:"2px solid rgba(255,255,255,.15)",borderRadius:8,outline:"none",fontFamily:F.b,boxSizing:"border-box",background:"rgba(255,255,255,.08)",color:"#fff",marginBottom:6}} onFocus={e=>e.target.style.borderColor=C.g} onBlur={e=>e.target.style.borderColor="rgba(255,255,255,.15)"}/>
+{err&&<div style={{color:"#ef5350",fontSize:12,marginTop:4,marginBottom:4}}>{err}</div>}
+<button onClick={tryAuth} style={{...bp,width:"100%",marginTop:10,padding:"12px",fontSize:14}}>🔑 Sign In</button>
+<button onClick={onBack} style={{background:"none",border:"none",color:"#78909c",fontSize:12,cursor:"pointer",fontFamily:F.b,marginTop:12,display:"block",width:"100%",textAlign:"center"}}>← Back to student login</button>
+</div></div>}
+
+// TEACHER DASHBOARD
+function TeacherPanel({onBack,students,setStudents,locks,setLocks}){const[tab,sTab]=useState("unlock");const[sel,sSel]=useState("");const[bType,sBT]=useState("raise");const[bAmt,sBA]=useState(5000);const[evtTxt,sET]=useState("");const[evtAmt,sEA]=useState(-2000);const[mktMod,sMM]=useState(0);const[rateAdj,sRA]=useState(6.8);const[notif,sN]=useState("");const show=m=>{sN(m);setTimeout(()=>sN(""),3e3)};
+const apply=(targets)=>{setStudents(p=>p.map(s=>{if(targets!=="all"&&s.name!==targets)return s;if(bType==="raise")return{...s,salary:(s.salary||0)+bAmt,teacherBoosts:[...(s.teacherBoosts||[]),`Salary +${fmt(bAmt)}`]};if(bType==="credit_up")return{...s,creditScore:Math.min(850,(s.creditScore||700)+bAmt),teacherBoosts:[...(s.teacherBoosts||[]),`Credit +${bAmt}`]};if(bType==="credit_down")return{...s,creditScore:Math.max(300,(s.creditScore||700)-bAmt),teacherBoosts:[...(s.teacherBoosts||[]),`Credit -${bAmt}`]};if(bType==="money")return{...s,teacherAcctBoost:(s.teacherAcctBoost||0)+bAmt,teacherBoosts:[...(s.teacherBoosts||[]),`+${fmt(bAmt)} acct`]};if(bType==="event"){const ev={t:evtTxt||"Teacher event",a:evtAmt};return{...s,teacherEvents:[...(s.teacherEvents||[]),ev],teacherBoosts:[...(s.teacherBoosts||[]),ev.t]}}return s}));show(targets==="all"?"✅ Applied to all!":"✅ Applied to "+targets+"!")};
+const setMkt=()=>{setStudents(p=>p.map(s=>({...s,teacherMktMod:mktMod,teacherRate:rateAdj})));show(`✅ Market: ${mktMod>0?"+":""}${mktMod}%, Rate: ${rateAdj.toFixed(1)}%`)};
+const lkl=["After Education","After Budget","After Housing","After Investing"];const lkk=["pause1","pause2","pause3","pause4"];
+return<Ph title="🍎 Teacher Dashboard" sub="Unlock sections, boost students, control markets.">
+{notif&&<div style={{background:C.gl,border:"1px solid #66bb6a",borderRadius:8,padding:"7px 12px",marginBottom:12,fontSize:12,color:"#1b5e20",fontWeight:600,textAlign:"center"}}>{notif}</div>}
+<div style={{display:"flex",gap:5,marginBottom:16,flexWrap:"wrap"}}>{[{id:"unlock",l:"🔓 Unlock"},{id:"boost",l:"⚡ Boost"},{id:"market",l:"📊 Markets"},{id:"students",l:"👨‍🎓 Students"},{id:"events",l:"🎲 Events"}].map(t=><button key={t.id} onClick={()=>sTab(t.id)} style={{padding:"7px 12px",borderRadius:7,border:"none",background:tab===t.id?C.dk:"#e8e6e0",color:tab===t.id?"#fff":C.t,fontWeight:700,fontSize:11,cursor:"pointer",fontFamily:F.b}}>{t.l}</button>)}</div>
+
+{tab==="unlock"&&<div style={{background:"#f8f7f4",borderRadius:14,padding:18}}><h3 style={{fontFamily:F.b,fontSize:15,color:C.dk,margin:"0 0 12px"}}>Pause Point Controls</h3><p style={{fontSize:12,color:C.tl,marginBottom:14}}>Students pause at key sections. Unlock when ready.</p><div style={{display:"grid",gap:8}}>{lkk.map((k,i)=><div key={k} style={{display:"flex",justifyContent:"space-between",alignItems:"center",background:C.card,borderRadius:10,padding:"12px 16px",border:`1px solid ${C.br}`}}><div><strong style={{fontSize:13,color:C.dk}}>{lkl[i]}</strong><div style={{fontSize:10,color:C.m}}>Pause #{i+1}</div></div><button onClick={()=>setLocks(p=>({...p,[k]:!p[k]}))} style={{...(locks[k]?{...bs,borderColor:C.r,color:C.r,fontSize:11,padding:"6px 14px"}:{...bp,fontSize:11,padding:"6px 14px"})}}>{locks[k]?"🔒 Locked":"🔓 Open"}</button></div>)}</div></div>}
+
+{tab==="boost"&&<div style={{background:"#f8f7f4",borderRadius:14,padding:18}}>
+<div style={{marginBottom:12}}><label style={{fontSize:12,fontWeight:600,color:C.t,display:"block",marginBottom:3}}>Student</label><select value={sel} onChange={e=>sSel(e.target.value)} style={{width:"100%",padding:"7px 10px",borderRadius:7,border:`2px solid ${C.br}`,fontSize:12,fontFamily:F.b}}><option value="">Choose...</option>{students.map(s=><option key={s.name} value={s.name}>{s.name} — {s.career||"—"} ({fmt(s.salary||0)})</option>)}</select></div>
+<div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:12}}>{[{id:"raise",l:"💰 Raise",c:C.g},{id:"credit_up",l:"📈 Credit+",c:C.b},{id:"credit_down",l:"📉 Credit-",c:C.r},{id:"money",l:"🏦 Add $",c:"#7b1fa2"},{id:"event",l:"🎲 Event",c:C.w}].map(a=><button key={a.id} onClick={()=>sBT(a.id)} style={{padding:"5px 10px",borderRadius:6,border:bType===a.id?`2px solid ${a.c}`:`1px solid ${C.br}`,background:bType===a.id?`${a.c}15`:C.card,color:a.c,fontWeight:700,fontSize:10,cursor:"pointer",fontFamily:F.b}}>{a.l}</button>)}</div>
+{bType!=="event"&&<div style={{marginBottom:12}}><label style={{fontSize:11,fontWeight:600,color:C.t}}>Amount</label><input type="number" value={bAmt} onChange={e=>sBA(+e.target.value||0)} style={{width:160,padding:"6px 10px",borderRadius:6,border:`2px solid ${C.br}`,fontSize:14,fontWeight:700,fontFamily:F.b,marginLeft:8}}/></div>}
+{bType==="event"&&<><div style={{marginBottom:8}}><input value={evtTxt} onChange={e=>sET(e.target.value)} placeholder="Event description..." style={{width:"100%",padding:"7px 10px",borderRadius:6,border:`2px solid ${C.br}`,fontSize:12,fontFamily:F.b,boxSizing:"border-box"}}/></div><div style={{marginBottom:12}}><label style={{fontSize:11,color:C.t}}>Impact $</label><input type="number" value={evtAmt} onChange={e=>sEA(+e.target.value||0)} style={{width:140,padding:"6px 10px",borderRadius:6,border:`2px solid ${C.br}`,fontSize:14,fontWeight:700,fontFamily:F.b,marginLeft:8}}/><span style={{fontSize:9,color:C.m,marginLeft:6}}>neg=expense, pos=income</span></div></>}
+<div style={{display:"flex",gap:6}}><button onClick={()=>apply(sel)} disabled={!sel} style={{...bp,opacity:sel?1:.4,fontSize:11,padding:"8px 16px"}}>Apply to {sel||"—"}</button><button onClick={()=>apply("all")} disabled={!students.length} style={{...bs,fontSize:11,padding:"8px 16px"}}>Apply All</button></div></div>}
+
+{tab==="market"&&<div style={{background:"#f8f7f4",borderRadius:14,padding:18}}>
+<h3 style={{fontFamily:F.b,fontSize:15,color:C.dk,margin:"0 0 12px"}}>📊 Market & Rate Controls</h3>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+<div style={{background:C.card,borderRadius:12,padding:16,border:`1px solid ${C.br}`}}><div style={{fontSize:12,fontWeight:700,color:C.dk,marginBottom:6}}>Stock Market Modifier</div><input type="range" min={-20} max={20} value={mktMod} onChange={e=>sMM(+e.target.value)} style={{width:"100%",accentColor:mktMod>=0?C.g:C.r}}/><div style={{fontSize:20,fontWeight:800,color:mktMod>=0?C.g:C.r,textAlign:"center"}}>{mktMod>0?"+":""}{mktMod}%</div></div>
+<div style={{background:C.card,borderRadius:12,padding:16,border:`1px solid ${C.br}`}}><div style={{fontSize:12,fontWeight:700,color:C.dk,marginBottom:6}}>Mortgage Rate</div><input type="range" min={3} max={10} step={.1} value={rateAdj} onChange={e=>sRA(+e.target.value)} style={{width:"100%",accentColor:"#fbbf24"}}/><div style={{fontSize:20,fontWeight:800,color:"#fbbf24",textAlign:"center"}}>{rateAdj.toFixed(1)}%</div></div></div>
+<button onClick={setMkt} style={bp}>Apply to All Students</button></div>}
+
+{tab==="students"&&<div>{students.length===0?<div style={{textAlign:"center",padding:30,color:C.m}}>📋 No students yet.</div>:<div style={{display:"grid",gap:8}}>{students.map((s,i)=><div key={i} style={{background:"#f8f7f4",borderRadius:12,padding:12,border:`1px solid ${C.br}`}}><div style={{display:"flex",justifyContent:"space-between",flexWrap:"wrap",gap:4}}><div><strong style={{fontSize:14,color:C.dk}}>{s.name}</strong><div style={{fontSize:11,color:C.tl}}>{s.career||"—"} • {fmt(s.salary||0)}/yr • Credit: {s.creditScore||700}{s.carInsType?` • Car: ${s.carInsType}`:""}</div></div>{s.edPath&&<Tg c={C.b} l={EP.find(p=>p.id===s.edPath)?.t||""}/>}</div>{s.teacherBoosts?.length>0&&<div style={{marginTop:4,display:"flex",gap:2,flexWrap:"wrap"}}>{s.teacherBoosts.map((b,j)=><span key={j} style={{fontSize:9,background:"#bbdefb",color:"#0d47a1",padding:"1px 5px",borderRadius:3}}>{b}</span>)}</div>}</div>)}</div>}</div>}
+
+{tab==="events"&&<div style={{background:"#f8f7f4",borderRadius:14,padding:18}}><h3 style={{fontFamily:F.b,fontSize:14,color:C.dk,margin:"0 0 10px"}}>Quick Templates</h3><div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:7}}>{[{t:"🏠 Roof emergency!",a:-4500},{t:"🚗 Car accident!",a:-2800},{t:"💰 Performance bonus!",a:3000},{t:"📈 Promotion!",a:8000},{t:"🏥 Medical bill",a:-2000},{t:"🎓 Tuition help",a:5000}].map((ev,i)=><button key={i} onClick={()=>{sBT("event");sET(ev.t);sEA(ev.a);sTab("boost")}} style={{padding:10,borderRadius:10,border:`1px solid ${C.br}`,background:C.card,cursor:"pointer",textAlign:"left",fontFamily:F.b}}><div style={{fontSize:12,fontWeight:700,color:C.dk}}>{ev.t}</div><div style={{fontSize:11,color:ev.a>0?C.g:C.r,fontWeight:700}}>{ev.a>0?"+":""}{fmt(ev.a)}</div></button>)}</div></div>}
+
+<div style={{marginTop:20,display:"flex",justifyContent:"center"}}><button onClick={onBack} style={bs}>← Sign Out</button></div></Ph>}
+async function saveStudent(pd){try{localStorage.setItem(`student:${pd.name}`,JSON.stringify(pd));const idx=JSON.parse(localStorage.getItem("student:_index")||"[]");if(!idx.includes(pd.name)){idx.push(pd.name);localStorage.setItem("student:_index",JSON.stringify(idx))}}catch(e){}}
+async function loadStudent(name){try{const r=localStorage.getItem(`student:${name}`);return r?JSON.parse(r):null}catch(e){return null}}
+async function loadAllStudents(){try{const idx=JSON.parse(localStorage.getItem("student:_index")||"[]");const out=[];for(const n of idx){const r=localStorage.getItem(`student:${n}`);if(r)out.push(JSON.parse(r))}return out}catch(e){return[]}}
+async function saveLocks(lk){try{localStorage.setItem("teacher:locks",JSON.stringify(lk))}catch(e){}}
+async function loadLocks(){try{const r=localStorage.getItem("teacher:locks");return r?JSON.parse(r):null}catch(e){return null}}
+
+function LoginScreen({onLogin,onTeacher}){
+const[name,sN]=useState("");const[loading,sL]=useState(false);const[returning,sR]=useState(null);const[err,sE]=useState("");
+const tryLogin=async()=>{if(!name.trim()){sE("Enter your name");return}sL(true);sE("");const ex=await loadStudent(name.trim());if(ex){sR(ex);sL(false)}else{onLogin(name.trim(),null);sL(false)}};
+return<div style={{minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"linear-gradient(160deg,#0a0e27,#1a2744 40%,#0a3d2e)",fontFamily:F.b,padding:24}}>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800;900&family=Fraunces:wght@700;800;900&display=swap" rel="stylesheet"/>
+<div style={{fontSize:60,marginBottom:10}}>💸</div>
+<h1 style={{fontFamily:F.d,fontSize:"clamp(32px,5vw,50px)",fontWeight:900,color:"#e8f5e9",textAlign:"center",margin:"0 0 6px",lineHeight:1.05}}>Life & Money</h1>
+<p style={{color:"#80cbc4",fontSize:15,textAlign:"center",maxWidth:480,margin:"0 0 28px",lineHeight:1.5}}>Sign in to start or continue your financial journey.</p>
+{!returning?<div style={{background:"rgba(255,255,255,.06)",borderRadius:16,padding:28,width:"100%",maxWidth:380}}>
+<label style={{display:"block",color:"#a5d6a7",fontSize:13,fontWeight:600,marginBottom:6}}>Your name:</label>
+<input value={name} onChange={e=>sN(e.target.value)} placeholder="Full name..." onKeyDown={e=>e.key==="Enter"&&tryLogin()} style={{width:"100%",padding:"13px 16px",fontSize:17,border:"2px solid rgba(255,255,255,.15)",borderRadius:10,outline:"none",fontFamily:F.b,boxSizing:"border-box",background:"rgba(255,255,255,.08)",color:"#fff"}} onFocus={e=>e.target.style.borderColor=C.g} onBlur={e=>e.target.style.borderColor="rgba(255,255,255,.15)"}/>
+{err&&<div style={{color:"#ef5350",fontSize:12,marginTop:6}}>{err}</div>}
+<button onClick={tryLogin} disabled={loading} style={{...bp,width:"100%",marginTop:14,padding:"13px",fontSize:15,opacity:loading?.6:1}}>{loading?"Loading...":"🎮 Sign In & Play"}</button>
+<div style={{borderTop:"1px solid rgba(255,255,255,.1)",marginTop:18,paddingTop:14,textAlign:"center"}}><button onClick={onTeacher} style={{background:"none",border:"none",color:"#80cbc4",fontSize:13,cursor:"pointer",fontFamily:F.b,fontWeight:600}}>🍎 Teacher Dashboard →</button></div>
+</div>
+:<div style={{background:"rgba(255,255,255,.06)",borderRadius:16,padding:28,width:"100%",maxWidth:420}}>
+<div style={{textAlign:"center",marginBottom:16}}><div style={{fontSize:40,marginBottom:8}}>👋</div><h3 style={{fontFamily:F.d,color:"#e8f5e9",margin:"0 0 4px",fontSize:20}}>Welcome back, {returning.name}!</h3><p style={{color:"#80cbc4",fontSize:13}}>Saved progress found.</p></div>
+<div style={{background:"rgba(255,255,255,.06)",borderRadius:10,padding:14,marginBottom:16}}>
+<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,fontSize:12,color:"#a5d6a7"}}>
+{returning.career&&<div>💼 {returning.career}</div>}
+{returning.salary>0&&<div>💰 {fmt(returning.salary)}/yr</div>}
+{returning.edPath&&<div>🎓 {EP.find(p=>p.id===returning.edPath)?.t}</div>}
+{returning.phase&&<div>📍 {returning.phase}</div>}
+</div></div>
+<div style={{display:"flex",gap:10,flexDirection:"column"}}><button onClick={()=>onLogin(returning.name,returning)} style={{...bp,width:"100%",padding:"12px",fontSize:14}}>▶️ Continue</button><button onClick={()=>onLogin(name.trim(),null)} style={{...bs,width:"100%",padding:"12px",fontSize:13,background:"rgba(255,255,255,.06)",color:"#a5d6a7",borderColor:"rgba(255,255,255,.15)"}}>🔄 Start Over</button><button onClick={()=>sR(null)} style={{background:"none",border:"none",color:"#78909c",fontSize:12,cursor:"pointer",fontFamily:F.b,marginTop:4}}>← Different name</button></div>
+</div>}
+</div>}
+
+const PHASES=["welcome","interests","education","pause1","career","paystub","budget","pause2","lifeChoices","housing","pause3","investing","pause4","lifeEvents","retirement","summary","teacher"];
+const initPd={name:"",interests:[],motivations:[],edPath:null,debt:0,loanMo:0,salMul:1,career:null,salary:0,baseSal:0,budget:{},retPct:.06,monthlySave:0,monthlyInv:100,ret401k:0,creditScore:700,emergFund:0,wantsHouse:false,wantsMarriage:false,dualIncome:0,neighborhood:null,homeSize:null,homePrice:0,downPay:0,mortPay:0,hasHomeIns:false,homeInsMo:0,carInsType:"full",carDeductible:1000,carInsMo:0,intRate:6.8,invAlloc:{},avgRet:.08,simResult:null,teacherBoosts:[],teacherEvents:[],teacherMktMod:0,teacherRate:6.8,teacherAcctBoost:0,age:18,yearsElapsed:0,totalInvested:0,totalRetirement:0,phase:"welcome"};
+
+function App(){
+const[phase,sP]=useState("login");
+const[pd,sPd]=useState({...initPd});
+const[students,sSt]=useState([]);
+const[locks,sLk]=useState({pause1:true,pause2:true,pause3:true,pause4:true});
+const[ready,sReady]=useState(false);
+const[teacherAuth,sTA]=useState(false);
+
+useEffect(()=>{(async()=>{const lk=await loadLocks();if(lk)sLk(lk);const st=await loadAllStudents();if(st.length)sSt(st);sReady(true)})()},[]);
+useEffect(()=>{if(ready)saveLocks(locks)},[locks,ready]);
+useEffect(()=>{if(pd.name&&phase!=="login"&&phase!=="welcome"&&phase!=="teacher"&&phase!=="teacherLogin"&&ready){saveStudent(pd);sSt(p=>{const e=p.find(s=>s.name===pd.name);return e?p.map(s=>s.name===pd.name?{...pd}:s):[...p,{...pd}]})}},[phase,ready]);
+
+const go=(p)=>{sP(p);sPd(d=>{const u={...d,phase:p};if(d.name&&ready)saveStudent(u);return u});window.scrollTo({top:0,behavior:"smooth"})};
+const handleLogin=async(name,ex)=>{if(ex){sPd(ex);sP(ex.phase||"interests")}else{sPd({...initPd,name});sP("interests")}};
+const goTeacher=async()=>{if(!teacherAuth){sP("teacherLogin");return}const st=await loadAllStudents();if(st.length)sSt(st);const lk=await loadLocks();if(lk)sLk(lk);sP("teacher")};
+const handleTeacherAuth=async()=>{sTA(true);const st=await loadAllStudents();if(st.length)sSt(st);const lk=await loadLocks();if(lk)sLk(lk);sP("teacher")};
+useEffect(()=>{if(!phase.startsWith("pause"))return;const iv=setInterval(async()=>{const lk=await loadLocks();if(lk)sLk(lk)},3000);return()=>clearInterval(iv)},[phase]);
+const restart=async()=>{const n=pd.name;const f={...initPd,name:n,phase:"interests"};sPd(f);await saveStudent(f);sP("interests")};
+
+const FL='https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800;900&family=Fraunces:wght@700;800;900&display=swap';
+const pauseInfo={pause1:{t:"Education Complete",m:"Wait for teacher to discuss choices.",nx:"career"},pause2:{t:"Budget Complete",m:"Teacher will review outcomes.",nx:"lifeChoices"},pause3:{t:"Housing Complete",m:"Discuss housing impact on wealth.",nx:"investing"},pause4:{t:"Investing Complete",m:"Discuss allocations & market impact.",nx:"lifeEvents"}};
+
+if(!ready)return<div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#0a0e27",color:"#80cbc4",fontFamily:F.b}}>Loading...</div>;
+if(phase==="login")return<LoginScreen onLogin={handleLogin} onTeacher={()=>sP("teacherLogin")}/>;
+if(phase==="teacherLogin")return<TeacherLogin onAuth={handleTeacherAuth} onBack={()=>sP("login")}/>;
+if(phase==="teacher"){const setSS=(fn)=>{sSt(prev=>{const nx=typeof fn==="function"?fn(prev):fn;nx.forEach(s=>saveStudent(s));return nx})};return<div style={{minHeight:"100vh",background:C.bg,fontFamily:F.b}}><link href={FL} rel="stylesheet"/><TeacherPanel onBack={()=>{sTA(false);sP("login")}} students={students} setStudents={setSS} locks={locks} setLocks={sLk}/></div>}
+const isPause=pauseInfo[phase];
+const eraMap={pause1:LIFE_ERA.era1,pause2:LIFE_ERA.era2,pause3:LIFE_ERA.era3,pause4:null};
+if(isPause)return<div style={{minHeight:"100vh",background:C.bg,fontFamily:F.b}}><link href={FL} rel="stylesheet"/><div style={{background:C.card,borderBottom:`1px solid ${C.br}`,padding:"10px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:50}}><div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:18}}>💸</span><strong style={{color:C.dk,fontSize:14}}>Life & Money</strong>{pd.name&&<span style={{color:C.tl,fontSize:12}}>• {pd.name} (Age {pd.age||18})</span>}</div><button onClick={()=>sP("login")} style={{fontSize:11,background:"none",border:`1px solid ${C.br}`,borderRadius:6,padding:"4px 10px",cursor:"pointer",color:C.tl,fontFamily:F.b}}>🚪</button></div><PauseScreen title={isPause.t} msg={isPause.m} onCont={()=>go(isPause.nx)} locked={locks[phase]} era={eraMap[phase]} pd={pd} onUpdatePd={sPd}/></div>;
+const gp=PHASES.filter(p=>!p.startsWith("pause")&&p!=="welcome"&&p!=="teacher"&&p!=="login");
+const gi=gp.indexOf(phase);
+return<div style={{minHeight:"100vh",background:C.bg,fontFamily:F.b}}>
+<link href={FL} rel="stylesheet"/>
+<div style={{background:C.card,borderBottom:`1px solid ${C.br}`,padding:"10px 18px",display:"flex",justifyContent:"space-between",alignItems:"center",position:"sticky",top:0,zIndex:50}}>
+<div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:18}}>💸</span><strong style={{color:C.dk,fontSize:14}}>Life & Money</strong>{pd.name&&<span style={{color:C.tl,fontSize:12}}>• {pd.name} (Age {pd.age||18})</span>}</div>
+<div style={{display:"flex",gap:6}}>{pd.name&&<><span style={{fontSize:10,color:C.tl,padding:"4px 8px",background:"#f8f7f4",borderRadius:6}}>💳 {pd.creditScore||700}</span><span style={{fontSize:10,color:C.tl,padding:"4px 8px",background:"#f8f7f4",borderRadius:6}}>🎂 {pd.age||18}</span></>}<button onClick={()=>sP("login")} style={{fontSize:11,background:"none",border:`1px solid ${C.br}`,borderRadius:6,padding:"4px 10px",cursor:"pointer",color:C.tl,fontFamily:F.b}}>🚪</button></div></div>
+{gi>=0&&<div style={{padding:"0 18px",marginBottom:2,marginTop:6}}><div style={{height:4,background:C.br,borderRadius:2,overflow:"hidden"}}><div style={{height:"100%",width:`${((gi+1)/gp.length)*100}%`,background:`linear-gradient(90deg,${C.g},#0d9488)`,borderRadius:2,transition:"width .5s"}}/></div></div>}
+{phase==="interests"&&<InterestsPhase onDone={()=>go("education")} pd={pd} setPd={sPd}/>}
+{phase==="education"&&<EducationPhase onDone={()=>go("pause1")} pd={pd} setPd={sPd}/>}
+{phase==="career"&&<CareerPhase onDone={()=>go("paystub")} pd={pd} setPd={sPd}/>}
+{phase==="paystub"&&<PaystubPhase onDone={()=>go("budget")} pd={pd}/>}
+{phase==="budget"&&<BudgetPhase onDone={()=>go("pause2")} pd={pd} setPd={sPd}/>}
+{phase==="lifeChoices"&&<LifeChoicesPhase onDone={()=>pd.wantsHouse?go("housing"):go("pause3")} pd={pd} setPd={sPd}/>}
+{phase==="housing"&&<HousingPhase onDone={()=>go("pause3")} pd={pd} setPd={sPd}/>}
+{phase==="investing"&&<InvestingPhase onDone={()=>go("pause4")} pd={pd} setPd={sPd}/>}
+{phase==="lifeEvents"&&<LifeEventsPhase onDone={()=>go("retirement")} pd={pd} setPd={sPd}/>}
+{phase==="retirement"&&<RetirementPhase onDone={()=>go("summary")} pd={pd}/>}
+{phase==="summary"&&<SummaryPhase pd={pd} onRestart={restart} onTeacher={goTeacher}/>}
+</div>}
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>
